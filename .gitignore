@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+
+# Environment variables & secrets
+.env
+*.env
+
+# SQLite Databases & temporary data
+*.db
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+database.sqlite
+jobs.db
+
+# n8n runtime data & logs
+n8n-data/database.sqlite*
+n8n-data/n8nEventLog*
+n8n-data/crash.journal
+n8n-data/config
+
+# System & IDE files
+.DS_Store
+Thumbs.db
+*.log
+{code
+New Text Document.txt
