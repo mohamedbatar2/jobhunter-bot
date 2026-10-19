@@ -6,10 +6,11 @@ module.exports = {
         chatId: process.env.TELEGRAM_CHAT_ID,
     },
     keywords: [
-        'SOC Analyst', 'Cybersecurity Engineer', 'IT Security',
-        'Analyste Sécurité', 'Ingénieur Sécurité', 'Cyberdefense',
-        'Security Operations', 'SIEM', 'stage cybersécurité',
-        'alternance sécurité', 'penetration tester'
+        'Technicien Systèmes et Réseaux', 'Technicien Support Informatique',
+        'Technicien Informatique', 'Helpdesk', 'Support IT',
+        'Administrateur Systèmes et Réseaux', 'Gestion de parc informatique',
+        'Technicien Réseau', 'GLPI', 'Technicien maintenance informatique',
+        'Stage Systèmes et Réseaux', 'Stage Informatique'
     ],
     locations: ['Casablanca', 'Rabat', 'Maroc', 'Remote'],
     contractTypes: ['CDI', 'CDD', 'Stage', 'Alternance', 'CI'],

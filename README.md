@@ -38,8 +38,15 @@ It continuously monitors top job portals in Morocco and internationally, analyze
 - **SQLite Database** (`jobs.db`): Automatically stores unique job identifiers (`data-entity-urn`, `data-jk`, or URL hashes), titles, companies, and timestamps (`seen_at`).
 - **Zero Duplicate Processing**: Guarantees that no job posting is processed, analyzed by AI, or notified twice.
 
-### 4. 📢 Real-Time Alerting & n8n Workflow Integration
-- **Telegram Bot Notifications** (`telegram.js`): Formatted Markdown messages sent directly to your Telegram chat including:
+### 4. 📢 Real-Time Alerting, Interactive Telegram Bot & n8n Integration
+- **Interactive Telegram Bot** (`telegram.js`): Long-polling real-time listener supporting custom commands directly from chat:
+  - `/start` : Welcome message, status overview, and command list.
+  - `/start HH:MM` or `/schedule HH:MM` : Dynamically set the daily execution time (e.g., `/start 08:00`).
+  - `/run` : Trigger an immediate job search on all platforms without waiting for the scheduled time.
+  - `/status` : Real-time bot status, next scheduled run (Africa/Casablanca), and total jobs saved.
+  - `/keywords` : List of monitored job titles and keywords.
+  - `/help` : Command usage help guide.
+- **Telegram Bot Notifications**: Formatted Markdown messages sent directly to your Telegram chat including:
   - Role title, company, location, contract type, and salary details.
   - Match Score & AI justification.
   - Required skills & highlighted candidate strengths.
@@ -47,9 +54,18 @@ It continuously monitors top job portals in Morocco and internationally, analyze
   - Direct application link and source tag.
 - **n8n Webhook Dispatch**: Automatically triggers an n8n workflow (`POST http://localhost:5678/webhook/jobs`) for high-matching job postings (**Score >= 7**) to initiate secondary automations (e.g., tracking sheets, automated applications).
 
-### 5. ⏰ Automated Scheduling & Manual Trigger API
-- **Cron Scheduler**: Runs automatically twice a day at 08:00 and 20:00 (`0 8,20 * * *`) configured for the `Africa/Casablanca` timezone.
+### 5. ⏰ Dynamic Scheduling & Manual Trigger API
+- **Dynamic Cron Scheduler**: Default run twice a day at 08:00 and 20:00 (`0 8,20 * * *`) in `Africa/Casablanca` timezone, customizable on the fly via Telegram (`/schedule HH:MM`).
 - **HTTP Webhook Server**: Exposes an embedded HTTP endpoint (`POST http://localhost:3001/run`) allowing on-demand scraper triggers via webhooks or external tools.
+
+### 6. 📊 Modern Interactive Dashboard & ATS Application (`http://localhost:3000`)
+- **Vue d'ensemble / Dashboard**: Real-time KPI summary (Total Scraped, Match Score >= 7, Active applications, Interviews, Estimated Response Rate), fast scraper launch button, and recommended top matches.
+- **Offres Scrappées & Scores**: Search and filter all scraped offers by Match Score tier (🟢 7-10, 🟡 4-6, 🔴 1-3), portal source, recommended CV variant, and remote availability. Supports both Card Grid and Table views.
+- **Fiche Détail avec Bouton Postuler**: Comprehensive view of any offer with visual 1-10 Match Score gauge, AI diagnosis, recommended CV profile with justification, detected Strengths vs Gaps, custom cover email with 1-click copy, and a **direct "Postuler sur le site de l'offre" Apply button redirecting to the live job posting**.
+- **Suivi des Candidatures (ATS Kanban Board)**: Track applications across 5 stages (*À postuler*, *Postulé*, *Entretien RH / Tech*, *Offre reçue*, *Refus / Sans suite*) with **1-click status change dropdowns**, notes, and interview date reminders.
+- **Analyses KPIs & Optimisation CV**: Application conversion funnel charts, multi-CV variant performance comparison, top market in-demand skills, recurring gaps, portal quality benchmarks, and actionable recommendations to optimize Mohammed Batar's CV.
+- **Launch Command**: `cd scraper && npm run dashboard` (accessible at `http://localhost:3000`).
+
 
 ---
 

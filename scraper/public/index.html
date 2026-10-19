@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JobHunter AI — Dashboard & Suivi des Candidatures</title>
+  
+  <!-- Modern Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Chart.js CDN for KPI visualizations -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  
+  <!-- Custom Styles -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Top App Navigation Bar -->
+  <header class="app-header">
+    <div class="header-left">
+      <div class="brand">
+        <div class="logo-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <span class="brand-title">JobHunter <span class="badge-ai">AI</span></span>
+          <span class="brand-subtitle">Candidate: Mohammed Batar</span>
+        </div>
+      </div>
+      <div class="profile-chip">
+        <span class="pulse-dot"></span>
+        <span>SOC Analyst & Support IT</span>
+      </div>
+    </div>
+
+    <!-- Main Navigation Tabs -->
+    <nav class="nav-tabs">
+      <button class="nav-btn active" data-view="dashboard" id="tab-dashboard">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        <span>Tableau de Bord</span>
+      </button>
+
+      <button class="nav-btn" data-view="jobs" id="tab-jobs">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+        <span>Offres Scrappées</span>
+        <span class="counter-badge" id="badge-total-jobs">0</span>
+      </button>
+
+      <button class="nav-btn" data-view="applications" id="tab-applications">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        <span>Suivi Candidatures</span>
+        <span class="counter-badge accent" id="badge-total-apps">0</span>
+      </button>
+
+      <button class="nav-btn" data-view="kpis" id="tab-kpis">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+        <span>Analyses KPIs & CV</span>
+      </button>
+    </nav>
+
+    <!-- Header Actions -->
+    <div class="header-right">
+      <button class="btn btn-secondary btn-sm" id="btn-sync" title="Synchroniser les offres depuis Excel et la base">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-1.19"/></svg>
+        <span>Sync</span>
+      </button>
+
+      <button class="btn btn-primary btn-sm" id="btn-trigger-scraper" title="Lancer une recherche d'offres maintenant">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        <span>Lancer Scraping</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="main-container">
+
+    <!-- ============================================================== -->
+    <!-- VIEW 1: DASHBOARD OVERVIEW -->
+    <!-- ============================================================== -->
+    <section class="view-section active" id="view-dashboard">
+      <!-- Quick KPIs Metric Strip -->
+      <div class="kpi-grid">
+        <div class="kpi-card glass-panel" style="--accent: #38bdf8;">
+          <div class="kpi-header">
+            <span class="kpi-label">Total Offres Scrappées</span>
+            <div class="kpi-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 4.24 4.24M14.83 9.17l4.24-4.24M14.83 14.83l4.24 4.24M9.17 14.83l-4.24 4.24"/></svg></div>
+          </div>
+          <div class="kpi-val" id="dash-total-jobs">-</div>
+          <div class="kpi-sub">Indexées depuis LinkedIn, Rekrute, Indeed</div>
+        </div>
+
+        <div class="kpi-card glass-panel highlight-glow" style="--accent: #10b981;">
+          <div class="kpi-header">
+            <span class="kpi-label">Match Élevé (Score ≥ 7)</span>
+            <div class="kpi-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></div>
+          </div>
+          <div class="kpi-val text-emerald" id="dash-high-match">-</div>
+          <div class="kpi-sub">Adéquation forte avec votre CV</div>
+        </div>
+
+        <div class="kpi-card glass-panel" style="--accent: #6366f1;">
+          <div class="kpi-header">
+            <span class="kpi-label">Candidatures Actives</span>
+            <div class="kpi-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></div>
+          </div>
+          <div class="kpi-val text-indigo" id="dash-active-apps">-</div>
+          <div class="kpi-sub">En cours dans votre pipeline de suivi</div>
+        </div>
+
+        <div class="kpi-card glass-panel" style="--accent: #f59e0b;">
+          <div class="kpi-header">
+            <span class="kpi-label">Entretiens Décrochés</span>
+            <div class="kpi-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></div>
+          </div>
+          <div class="kpi-val text-amber" id="dash-interviews">-</div>
+          <div class="kpi-sub">Échanges RH & techniques en cours</div>
+        </div>
+
+        <div class="kpi-card glass-panel" style="--accent: #ec4899;">
+          <div class="kpi-header">
+            <span class="kpi-label">Taux de Réponse</span>
+            <div class="kpi-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
+          </div>
+          <div class="kpi-val text-pink" id="dash-response-rate">-%</div>
+          <div class="kpi-sub">Ratio candidatures envoyées / retours</div>
+        </div>
+      </div>
+
+      <!-- Quick Action / Status Banner -->
+      <div class="banner-panel glass-panel">
+        <div class="banner-left">
+          <div class="banner-badge">Profil Cible</div>
+          <h3>Mohammed Batar • Stratégie Multi-CV Activée</h3>
+          <p>Scraping automatique configuré pour le Maroc et le Remote international. Les offres sont analysées selon les 5 déclinaisons de CV : <strong>cv_thales</strong> (SOC/Cyber), <strong>cv_cfg</strong> (GRC/Audit), <strong>cv_cegid</strong> (.NET/Backend), <strong>cv_exploitation</strong> (Sys/Support), <strong>cv_general</strong>.</p>
+        </div>
+        <div class="banner-actions">
+          <button class="btn btn-emerald" onclick="switchView('jobs', { scoreTier: 'high' })">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <span>Voir les offres Score ≥ 7</span>
+          </button>
+          <button class="btn btn-secondary" onclick="switchView('applications')">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/></svg>
+            <span>Gérer le Suivi</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Two Column Layout: Top High Match Jobs + Pipeline Status -->
+      <div class="dashboard-split-grid">
+        <!-- High Match Opportunities -->
+        <div class="dash-block glass-panel">
+          <div class="block-header">
+            <div>
+              <h3 class="block-title">Opportunités Clés Recommandées</h3>
+              <p class="block-subtitle">Offres avec une note de correspondance de 7/10 et plus</p>
+            </div>
+            <button class="btn-link" onclick="switchView('jobs', { scoreTier: 'high' })">Voir tout →</button>
+          </div>
+          <div class="opportunity-list" id="dash-high-match-list">
+            <div class="loader-skeleton">Chargement des meilleures offres...</div>
+          </div>
+        </div>
+
+        <!-- Pipeline Overview & Skills Cloud -->
+        <div class="dash-block glass-panel">
+          <div class="block-header">
+            <div>
+              <h3 class="block-title">Pipeline de Suivi Rapide</h3>
+              <p class="block-subtitle">Statut actuel de vos candidatures</p>
+            </div>
+            <button class="btn-link" onclick="switchView('applications')">Tableau Kanban →</button>
+          </div>
+          
+          <div class="pipeline-summary-list" id="dash-pipeline-summary">
+            <!-- Populated via JS -->
+          </div>
+
+          <div class="skills-cloud-box">
+            <h4 class="sub-heading">Compétences Clés Demandées</h4>
+            <div class="tags-cloud" id="dash-skills-cloud">
+              <!-- Populated via JS -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================== -->
+    <!-- VIEW 2: SCRAPED JOB OFFERS (ALL JOBS WITH SCORES) -->
+    <!-- ============================================================== -->
+    <section class="view-section" id="view-jobs">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title">Offres d'Emploi Scrappées & Scores</h2>
+          <p class="section-subtitle">Toutes les offres extraites du web avec analyse IA, scores et CV recommandés</p>
+        </div>
+        <div class="section-actions">
+          <div class="view-mode-toggle">
+            <button class="toggle-btn active" id="btn-view-cards" title="Vue Cartes">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            </button>
+            <button class="toggle-btn" id="btn-view-table" title="Vue Tableau">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+            </button>
+          </div>
+          <span class="results-count" id="jobs-count-label">Chargement...</span>
+        </div>
+      </div>
+
+      <!-- Advanced Filter Bar -->
+      <div class="filter-bar glass-panel">
+        <div class="search-input-wrap">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="filter-search" placeholder="Rechercher par poste, entreprise, compétences, ville...">
+          <button class="clear-btn" id="btn-clear-search" style="display:none;">✕</button>
+        </div>
+
+        <div class="filter-controls-row">
+          <!-- Score Tier Filter -->
+          <div class="filter-group">
+            <label>Niveau de Match :</label>
+            <select id="filter-score-tier" class="custom-select">
+              <option value="all">Tous les scores</option>
+              <option value="high">🟢 Score Élevé (7 - 10)</option>
+              <option value="mid">🟡 À Examiner (4 - 6)</option>
+              <option value="low">🔴 Non Pertinent (1 - 3)</option>
+            </select>
+          </div>
+
+          <!-- Source Filter -->
+          <div class="filter-group">
+            <label>Source :</label>
+            <select id="filter-source" class="custom-select">
+              <option value="all">Toutes les sources</option>
+              <option value="LinkedIn">LinkedIn</option>
+              <option value="Rekrute">Rekrute</option>
+              <option value="Indeed">Indeed</option>
+              <option value="Alkhdma">Alkhdma</option>
+            </select>
+          </div>
+
+          <!-- CV Variant Filter -->
+          <div class="filter-group">
+            <label>CV Recommandé :</label>
+            <select id="filter-cv" class="custom-select">
+              <option value="all">Tous les profils CV</option>
+              <option value="cv_thales">🛡️ cv_thales (SOC / Cyberdéfense)</option>
+              <option value="cv_cfg">⚖️ cv_cfg (GRC / Audit SI / Banque)</option>
+              <option value="cv_cegid">💻 cv_cegid (.NET / C# / Backend)</option>
+              <option value="cv_exploitation">🖥️ cv_exploitation (SysAdmin / Support)</option>
+              <option value="cv_general">📄 cv_general (Général IT)</option>
+            </select>
+          </div>
+
+          <!-- Remote Filter -->
+          <div class="filter-group">
+            <label>Télétravail :</label>
+            <select id="filter-remote" class="custom-select">
+              <option value="all">Tous</option>
+              <option value="remote">Télétravail / Remote</option>
+              <option value="onsite">Sur site / Hybride</option>
+            </select>
+          </div>
+
+          <!-- Sort Filter -->
+          <div class="filter-group">
+            <label>Trier par :</label>
+            <select id="filter-sort" class="custom-select">
+              <option value="score_desc">Score IA (Décroissant)</option>
+              <option value="score_asc">Score IA (Croissant)</option>
+              <option value="date_desc">Date d'ajout (Plus récent)</option>
+              <option value="company_asc">Entreprise (A-Z)</option>
+              <option value="title_asc">Intitulé du poste (A-Z)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Jobs Grid / Table Container -->
+      <div id="jobs-container" class="jobs-grid-container">
+        <!-- Rendered by app.js -->
+      </div>
+
+      <!-- Pagination Footer -->
+      <div class="pagination-footer glass-panel" id="jobs-pagination">
+        <button class="btn btn-secondary btn-sm" id="btn-prev-page" disabled>← Précédent</button>
+        <span class="pagination-info" id="pagination-info">Page 1</span>
+        <button class="btn btn-secondary btn-sm" id="btn-next-page">Suivant →</button>
+      </div>
+    </section>
+
+    <!-- ============================================================== -->
+    <!-- VIEW 3: JOB DETAIL VIEW (FULL VIEW WITH APPLY BUTTON) -->
+    <!-- ============================================================== -->
+    <section class="view-section" id="view-job-detail">
+      <div class="detail-page-wrapper">
+        <!-- Back Navigation & Breadcrumb -->
+        <div class="detail-nav-bar">
+          <button class="btn btn-secondary btn-sm" onclick="switchView('jobs')">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+            <span>Retour à la liste des offres</span>
+          </button>
+          <div class="detail-quick-actions" id="detail-header-actions">
+            <!-- Direct external apply button populated by JS -->
+          </div>
+        </div>
+
+        <div class="detail-content-grid" id="detail-content-area">
+          <div class="loader-skeleton">Chargement des détails de l'offre...</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================== -->
+    <!-- VIEW 4: FOLLOW-UP PAGE (ATS MANAGEMENT & STATUS CHANGER) -->
+    <!-- ============================================================== -->
+    <section class="view-section" id="view-applications">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title">Suivi des Candidatures (ATS)</h2>
+          <p class="section-subtitle">Gérez vos candidatures, changez le statut en 1 clic et suivez vos entretiens</p>
+        </div>
+        <div class="section-actions">
+          <div class="view-mode-toggle">
+            <button class="toggle-btn active" id="btn-ats-kanban" title="Vue Kanban">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="5" height="18" rx="1"/><rect x="10" y="3" width="5" height="18" rx="1"/><rect x="17" y="3" width="5" height="18" rx="1"/></svg>
+            </button>
+            <button class="toggle-btn" id="btn-ats-table" title="Vue Tableau">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+            </button>
+          </div>
+          <button class="btn btn-primary btn-sm" id="btn-new-application">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <span>Nouvelle Candidature</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Quick ATS Filter -->
+      <div class="ats-filter-strip glass-panel">
+        <div class="ats-search">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="ats-search-input" placeholder="Filtrer les candidatures par entreprise, poste, notes...">
+        </div>
+        <div class="ats-stat-chips" id="ats-summary-chips">
+          <!-- Populated via JS -->
+        </div>
+      </div>
+
+      <!-- Kanban Board Container -->
+      <div class="kanban-board-wrapper" id="kanban-wrapper">
+        <div class="kanban-column" data-status="À postuler">
+          <div class="col-header" style="--col-color: #6366f1;">
+            <div class="col-title-wrap">
+              <span class="status-indicator"></span>
+              <h4>À postuler</h4>
+            </div>
+            <span class="col-count" id="count-col-to-apply">0</span>
+          </div>
+          <div class="col-cards-dropzone" id="zone-to-apply"></div>
+        </div>
+
+        <div class="kanban-column" data-status="Postulé">
+          <div class="col-header" style="--col-color: #38bdf8;">
+            <div class="col-title-wrap">
+              <span class="status-indicator"></span>
+              <h4>Postulé</h4>
+            </div>
+            <span class="col-count" id="count-col-applied">0</span>
+          </div>
+          <div class="col-cards-dropzone" id="zone-applied"></div>
+        </div>
+
+        <div class="kanban-column" data-status="Entretien">
+          <div class="col-header" style="--col-color: #f59e0b;">
+            <div class="col-title-wrap">
+              <span class="status-indicator"></span>
+              <h4>Entretiens</h4>
+            </div>
+            <span class="col-count" id="count-col-interview">0</span>
+          </div>
+          <div class="col-cards-dropzone" id="zone-interview"></div>
+        </div>
+
+        <div class="kanban-column" data-status="Offre">
+          <div class="col-header" style="--col-color: #10b981;">
+            <div class="col-title-wrap">
+              <span class="status-indicator"></span>
+              <h4>Offres Reçues</h4>
+            </div>
+            <span class="col-count" id="count-col-offer">0</span>
+          </div>
+          <div class="col-cards-dropzone" id="zone-offer"></div>
+        </div>
+
+        <div class="kanban-column" data-status="Refus">
+          <div class="col-header" style="--col-color: #f43f5e;">
+            <div class="col-title-wrap">
+              <span class="status-indicator"></span>
+              <h4>Refus / Sans suite</h4>
+            </div>
+            <span class="col-count" id="count-col-rejected">0</span>
+          </div>
+          <div class="col-cards-dropzone" id="zone-rejected"></div>
+        </div>
+      </div>
+
+      <!-- Table View Container (Hidden by default) -->
+      <div class="ats-table-wrapper glass-panel" id="ats-table-wrapper" style="display:none;">
+        <table class="ats-table" id="ats-table">
+          <thead>
+            <tr>
+              <th>Entreprise & Poste</th>
+              <th>Source</th>
+              <th>Score Match</th>
+              <th>CV Utilisé</th>
+              <th>Statut Actuel</th>
+              <th>Prochaine Étape / Notes</th>
+              <th>Date Postulée</th>
+              <th>Action Rapide</th>
+            </tr>
+          </thead>
+          <tbody id="ats-table-body">
+            <!-- Populated via JS -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============================================================== -->
+    <!-- VIEW 5: KPIS ANALYSES & CV OPTIMIZATION -->
+    <!-- ============================================================== -->
+    <section class="view-section" id="view-kpis">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title">Analyses KPIs & Optimisation du CV</h2>
+          <p class="section-subtitle">Diagnostic de vos candidatures, cartographie des compétences du marché et recommandations ciblées</p>
+        </div>
+        <div class="section-actions">
+          <button class="btn btn-secondary btn-sm" onclick="loadKpis()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-1.19"/></svg>
+            <span>Rafraîchir les métriques</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- KPI Highlights Cards -->
+      <div class="kpi-grid">
+        <div class="kpi-card glass-panel" style="--accent: #38bdf8;">
+          <div class="kpi-label">Taux de Conversion Entretien</div>
+          <div class="kpi-val text-cyan" id="kpi-interview-rate">-%</div>
+          <div class="kpi-sub">Candidatures transformées en RDV RH/Tech</div>
+        </div>
+
+        <div class="kpi-card glass-panel" style="--accent: #10b981;">
+          <div class="kpi-label">Taux d'Offres Finales</div>
+          <div class="kpi-val text-emerald" id="kpi-offer-rate">-%</div>
+          <div class="kpi-sub">Offres d'embauche obtenues</div>
+        </div>
+
+        <div class="kpi-card glass-panel" style="--accent: #8b5cf6;">
+          <div class="kpi-label">Profil CV le plus sollicité</div>
+          <div class="kpi-val text-indigo" id="kpi-top-cv">cv_thales</div>
+          <div class="kpi-sub">Meilleur volume de postes et adéquation</div>
+        </div>
+
+        <div class="kpi-card glass-panel" style="--accent: #f59e0b;">
+          <div class="kpi-label">Gaps Techniques Dominants</div>
+          <div class="kpi-val text-amber" id="kpi-top-gap">Expérience Cloud</div>
+          <div class="kpi-sub">Principal motif d'écart sur les offres</div>
+        </div>
+      </div>
+
+      <!-- Actionable CV Improvement Recommendations Box -->
+      <div class="recommendations-box glass-panel">
+        <div class="rec-header">
+          <div class="rec-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          </div>
+          <div>
+            <h3>Plan d'Amélioration & Recommandations Spécifiques au CV</h3>
+            <p>Actions concrètes générées par l'analyse des compétences et écarts récurrents sur vos offres</p>
+          </div>
+        </div>
+        <div class="rec-cards-grid" id="kpi-recommendations-list">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <!-- Charts Grid -->
+      <div class="charts-grid">
+        <!-- Chart 1: Funnel -->
+        <div class="chart-card glass-panel">
+          <div class="chart-header">
+            <h4>Entonnoir de Conversion des Candidatures</h4>
+            <span class="chart-tag">Funnel</span>
+          </div>
+          <div class="chart-canvas-box">
+            <canvas id="chart-funnel"></canvas>
+          </div>
+        </div>
+
+        <!-- Chart 2: CV Variants Performance -->
+        <div class="chart-card glass-panel">
+          <div class="chart-header">
+            <h4>Performance des 5 Versions de CV</h4>
+            <span class="chart-tag">Comparatif</span>
+          </div>
+          <div class="chart-canvas-box">
+            <canvas id="chart-cv"></canvas>
+          </div>
+        </div>
+
+        <!-- Chart 3: Skills Demand In Market -->
+        <div class="chart-card glass-panel">
+          <div class="chart-header">
+            <h4>Compétences les Plus Demandées sur le Marché</h4>
+            <span class="chart-tag">Marché IT</span>
+          </div>
+          <div class="chart-canvas-box">
+            <canvas id="chart-skills"></canvas>
+          </div>
+        </div>
+
+        <!-- Chart 4: Source Quality & Average Score -->
+        <div class="chart-card glass-panel">
+          <div class="chart-header">
+            <h4>Qualité & Score Moyen par Portail Emploi</h4>
+            <span class="chart-tag">Portails</span>
+          </div>
+          <div class="chart-canvas-box">
+            <canvas id="chart-sources"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ============================================================== -->
+  <!-- MODAL: APPLICATION STATUS CHANGER & QUICK APPLY -->
+  <!-- ============================================================== -->
+  <div class="modal-backdrop" id="modal-app" style="display:none;">
+    <div class="modal-dialog glass-panel">
+      <div class="modal-header">
+        <h3 id="modal-app-title">Mettre à jour la Candidature</h3>
+        <button class="modal-close-btn" onclick="closeModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <form id="form-application" onsubmit="handleApplicationSubmit(event)">
+          <input type="hidden" id="app-id">
+          <input type="hidden" id="app-job-id">
+
+          <div class="form-group">
+            <label>Offre associée / Entreprise</label>
+            <input type="text" id="app-job-title" class="form-input" readonly>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Statut de la Candidature *</label>
+              <select id="app-status" class="form-input" required>
+                <option value="À postuler">📝 À postuler</option>
+                <option value="Postulé">🚀 Postulé</option>
+                <option value="Entretien">📞 Entretien RH / Tech</option>
+                <option value="Offre">🏆 Offre reçue</option>
+                <option value="Refus">❌ Refusé</option>
+                <option value="Sans réponse">⏳ Sans réponse</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>CV Envoyé</label>
+              <select id="app-cv-version" class="form-input">
+                <option value="cv_thales">cv_thales (SOC / Cyber)</option>
+                <option value="cv_cfg">cv_cfg (GRC / Audit)</option>
+                <option value="cv_cegid">cv_cegid (.NET / Backend)</option>
+                <option value="cv_exploitation">cv_exploitation (SysAdmin / Support)</option>
+                <option value="cv_general">cv_general (Général)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Prochaine Étape</label>
+              <input type="text" id="app-next-step" class="form-input" placeholder="Ex: Relance email, Entretien Teams...">
+            </div>
+
+            <div class="form-group">
+              <label>Date Entretien (si programmé)</label>
+              <input type="datetime-local" id="app-interview-date" class="form-input">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Notes & Commentaires de suivi</label>
+            <textarea id="app-notes" class="form-input" rows="3" placeholder="Retours du recruteur, questions techniques posées, salaire discuté..."></textarea>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeModal()">Annuler</button>
+            <button type="submit" class="btn btn-primary">Enregistrer la Candidature</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Main JavaScript Logic -->
+  <script src="app.js"></script>
+</body>
+</html>

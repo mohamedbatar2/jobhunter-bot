@@ -1,98 +1,311 @@
 require('dotenv').config();
 const axios = require('axios');
-const config = require('./config');
+const { shouldAnalyzeJob, sanitizeDescription, createSyntheticRejection } = require('./preprocessor');
 
 async function analyzeJob(job) {
-  const prompt = `Tu es un assistant de recherche d'emploi expert. Analyse cette offre pour Mohammed Batar.
-
-OFFRE:
-Titre: ${job.title}
-Entreprise: ${job.company}
-Localisation: ${job.location || 'Non précisé'}
-Description: ${job.description || 'Non disponible'}
-Source: ${job.source}
-URL: ${job.url}
-
-PROFIL CANDIDAT:
-- Mohammed Batar, 22 ans, Casablanca, Maroc
-- IT Analyst @ SYPEX (ERP fintech OPCI/OPCVM, Oracle 19c, SQL, JasperReports)
-- Apprenti Cyberdefense @ DATAPROTECT (ELK Stack SIEM, NGFW, WAF, EDR, NAC)
-- Ingénierie Cybersécurité @ CNAM Paris (ISO 27005, EBIOS, PSSI, SECOPS, ISO 27035)
-- CompTIA Security+ certifié (Mai 2026)
-- Compétences: SOC N1, SIEM/ELK, ASP.NET Core 8, Python, Docker Compose, PostgreSQL, n8n, GitHub Actions CI/CD, Active Directory, GPO
-- Projets: BankingApp SOC Lab (ELK pipeline complet, simulation attaques), FinAudit (SaaS B2B API security, conformité BAM/AMMC)
-- Convention de stage CNAM Paris disponible
-- Langues: Arabe (natif), Français (professionnel), Anglais (courant)
-
-RÈGLES DE SCORING (nombre entier entre 1 et 10):
-- 9-10: Junior/Débutant/Stage/Alternance explicite + compétences correspondent à 80%+
-- 7-8: Pas de mention de niveau + compétences correspondent à 60%+
-- 5-6: Compétences partielles ou 1-3 ans demandés
-- 3-4: Senior/Lead ou 3-5 ans requis (gap important mais candidature possible)
-- 1-2: Manager/Architect/+5 ans ou poste hors domaine total
-
-RÈGLES D'EXCLUSION AUTOMATIQUE (score max 3):
-- Poste basé hors Maroc ET pas de remote explicite
-- Alternance France sans convention explicite
-- Java/Angular comme compétence principale
-- Automotive/OT/industriel pur
-
-SÉLECTION DU CV:
-- cv_thales: SOC, Blue Team, SIEM, cyberdéfense, analyste sécurité, threat detection
-- cv_cfg: GRC, audit SI, conformité, EBIOS, ISO 27005, banque, finance, risk management
-- cv_cegid: développeur .NET, ASP.NET Core, backend, API, fullstack
-- cv_exploitation: exploitation IT, infrastructure, support N1/N2, sysadmin, ops
-- cv_general: tout autre cas, poste mixte, ou si aucune catégorie ne correspond
-
-Réponds UNIQUEMENT en JSON valide, sans markdown, sans backticks, sans commentaires:
-{
-  "match_score": 7,
-  "match_reason": "explication courte pourquoi ce score",
-  "gaps": ["gap1", "gap2"],
-  "remote": true,
-  "cv_recommande": "cv_thales",
-  "fiche": {
-    "poste": "",
-    "entreprise": "",
-    "localisation": "",
-    "type_contrat": "CDI|CDD|Stage|Alternance|Freelance",
-    "salaire": "montant ou Non précisé",
-    "competences_requises": ["skill1", "skill2"],
-    "points_forts": ["point1", "point2"],
-    "langue_requise": "FR|EN|AR|Bilingue"
-  },
-  "draft_email": {
-    "objet": "",
-    "corps": ""
+  // Pre-processing filter: skip non-IT / irrelevant jobs to save LLM tokens
+  const filterResult = shouldAnalyzeJob(job);
+  if (!filterResult.shouldAnalyze) {
+    console.log(`[Pre-processing] ⚡ Économie de tokens : LLM ignoré pour "${job.title}" (${filterResult.reason})`);
+    return createSyntheticRejection(job, filterResult.reason);
   }
-}`;
+
+  // Sanitize and condense description to save 60-80% tokens
+  const cleanDescription = sanitizeDescription(job.description);
+
+  const prompt = `
+Tu es un assistant expert en recrutement IT, cybersecurite, GRC/finance et developpement logiciel au Maroc.
+
+Ta mission est d'analyser objectivement une offre d'emploi pour Mohammed Batar et de determiner :
+1. son niveau réel d’adéquation au poste ;
+2. les principaux écarts ;
+3. le CV le plus pertinent ;
+4. les informations importantes de l’offre ;
+5. un email de candidature adapté.
+
+IMPORTANT — RÈGLES DE FIABILITÉ :
+
+* Base-toi UNIQUEMENT sur les informations présentes dans l’offre et le profil.
+* N’invente aucune compétence, expérience, certification, responsabilité, salaire ou avantage.
+* Ne considère pas une compétence comme acquise uniquement parce qu’elle est proche d’une autre.
+* Distingue clairement les compétences professionnelles des connaissances académiques, laboratoires et projets.
+* Une compétence explicitement demandée comme "obligatoire", "required" ou "must have" pèse davantage qu’une compétence "preferred", "nice to have" ou "souhaitée".
+* Si une information n’est pas présente dans l’offre, écris "Non précisé".
+* Ne déduis pas un salaire à partir du marché.
+* Ne déduis pas le remote à partir du fait qu’une entreprise est internationale.
+* Si le mode de travail n’est pas explicitement indiqué, utilise false pour "remote".
+* Classe le domaine parmi "cybersecurity", "it_operations", "software_development", "grc_finance" et "other" selon les missions principales.
+* Classe le niveau parmi "stage", "junior", "intermediaire", "senior" et "non_precise".
+* Classe le contrat parmi "stage", "alternance", "cdi", "cdd", "freelance" et "non_precise".
+* Classe le mode parmi "presentiel", "hybride", "remote" et "non_precise". Ne deduis jamais remote.
+* Classe la zone parmi "maroc", "remote_international", "france", "autre" et "non_precise".
+* Decision: "pertinent" pour un score >= 7, "a_examiner" pour 4-6, "non_pertinent" pour 1-3.
+* Si le type de contrat n’est pas identifiable, utilise "Non précisé".
+* Si l’offre contient une information manifestement incohérente ou probablement erronée, ne la transforme pas automatiquement en exigence. Mentionne-la éventuellement dans "gaps" ou "match_reason".
+
+PROFIL CANDIDAT :
+
+Mohammed Batar
+Localisation : Casablanca, Maroc. Coordonnees : batarmohamed.03@email.com, +212 695-008079, LinkedIn Mohammed Batar, github.com/mohamedbatar2.
+Positionnement : professionnel IT/cybersecurite avec experience pratique en support, operations SIEM, securite reseau et applicative. Ne le presente pas comme "etudiant en ingenierie cybersecurite" ou ne mets son statut d'etudiant en avant.
+
+EXPERIENCE PROFESSIONNELLE (a privilegier dans le scoring et les emails, avant les certifications) :
+- Helpdesk & Cybersecurity Intern, LEONI Wiring Systems, Bouskoura (septembre 2026-present) : support infrastructure L1 et utilisateurs pour plus de 300 postes industriels; controle des acces, mises a jour OS, imaging de postes et application des mesures de securite endpoint dans un environnement industriel/OT.
+- IT Analyst, SYPEX, Casablanca (janvier-mai 2026) : support de production Tier 2 pour ERP financier sur Oracle 19c et JasperReports; depannage des acces RBAC, investigation d'incidents applicatifs, verification d'integrite des donnees par SQL et analyses de causes racines.
+- Cyber Defense Apprentice, DATAPROTECT, Casablanca (decembre 2025-mai 2026) : pipelines ELK pour collecte et analyse des journaux; triage de telemetrie; analyse d'alertes simulees EDR, NGFW et WAF; investigation d'IoC associes a MITRE ATT&CK.
+- Software & IT Engineering Intern, CFCA Maroc, Casablanca (septembre-novembre 2025) : migration ERP vers Microsoft Dynamics 365, mapping et validation de donnees, scripts SQL de synchronisation; developpement et tests d'integrations REST C#/.NET.
+
+COMPETENCES : SIEM/ELK, EDR, NGFW, WAF, triage d'incidents, IoC, OWASP API Security Top 10, tests de securite API, TCP/IP, Wireshark, DNS/DHCP, LAN/VLAN, Windows Server, Active Directory, GPO, Linux, PowerShell, Bash, ISO 27005, EBIOS RM, ISO 27035, PSSI, MITRE ATT&CK, ISO 27001, Python, C#, ASP.NET Core, REST APIs, Docker, Git et SQL.
+
+PROJETS :
+- FinAudit : outil Python d'evaluation de securite REST API couvrant notamment BOLA, mauvaise configuration JWT et injection; workflow Docker et tests repetables.
+- BankingApp : application bancaire ASP.NET Core 8 avec telemetrie Serilog/ELK; simulations brute force et injection SQL pour valider journalisation et detection.
+
+FORMATION (a mentionner apres l'experience) : CNAM, formation de niveau master/ingenieur en cybersecurite (2025-present); Licence en genie logiciel, FST Errachidia (diplomee en 2025).
+CERTIFICATIONS : CompTIA Security+ SY0-701 (indiquee valide jusqu'en mai 2026 dans le CV; ne pas la decrire comme actuellement valide); Google Technical Support Fundamentals.
+Langues : arabe, francais professionnel, anglais courant (selon le CV).
+N'invente pas d'annees d'experience, diplomes, responsabilites ou competences absents de ce profil. Distingue les postes, stages, projets et etudes.
+
+REGLES DE SCORING :
+
+Attribue un score entier de 1 a 10 selon les missions principales, les competences obligatoires et le niveau d'experience :
+- 9-10 : poste junior ou stage avec forte correspondance, notamment SOC/Blue Team, securite reseau/API, support cyber ou securite OT.
+- 7-8 : bonne correspondance et candidature realiste, avec quelques ecarts surmontables.
+- 5-6 : correspondance partielle ou ecart d'experience/competences important mais non eliminatoire.
+- 3-4 : poste confirme/senior ou exigences majeures hors profil.
+- 1-2 : poste sans rapport ou incompatibilite majeure.
+
+Plafonds objectifs :
+- Poste hors Maroc sans remote explicitement indique : score maximum 3.
+- Alternance en France exigeant une residence en France : score maximum 3. Un stage en France peut etre envisage car une convention CNAM est disponible; ne presume pas que les conditions administratives ou de deplacement sont remplies.
+- Plus de 3 ans d'experience obligatoire sans ouverture aux profils moins experimentes : score maximum 3.
+- Poste logiciel sans lien avec C#/.NET, ASP.NET Core ou API : score maximum 3.
+- Anglais bilingue/C1-C2 obligatoire au quotidien : score maximum 4.
+
+Ne penalise pas automatiquement une technologie secondaire qui peut s'apprendre. Distingue l'experience professionnelle des etudes et projets. Une competence obligatoire pese plus qu'une competence souhaitee.
+REMOTE : true uniquement si le teletravail/remote/hybride est explicitement indique; sinon false.
+Classification : domaine parmi cybersecurity, it_operations, software_development, grc_finance, other; niveau parmi intern, junior, mid, senior, lead, unknown; contrat parmi internship, apprenticeship, permanent, fixed_term, freelance, unknown; mode parmi remote, hybrid, onsite, unknown; zone parmi morocco, remote_eligible, france_internship, other, unknown; decision parmi strong_match (score >=7), review (score 4-6), reject (score <=3).
+
+CHOIX DU CV :
+- cv_thales : SOC, cyberdefense, Blue Team, SIEM, threat detection.
+- cv_cfg : GRC, audit SI, risques, conformite, EBIOS/ISO 27005, banque et finance.
+- cv_cegid : ASP.NET Core, .NET, backend et API.
+- cv_exploitation : operations IT, infrastructure, systemes et support.
+- cv_general : poste mixte ou autre.
+Choisis selon les missions principales. cv_recommande doit etre exactement l'une de ces cinq cles.
+
+EMAIL :
+- Ecris un email professionnel et concis de 150 mots maximum dans la langue dominante de l'offre.
+- Mets en avant uniquement les atouts pertinents et confirmes; distingue experience professionnelle, formation et projets.
+- N'invente pas d'experience, de destinataire ou de salaire.
+- Si aucun recruteur n'est nomme, commence par Bonjour Madame, Monsieur ou Dear Hiring Manager.
+- Mentionne le CV en piece jointe.
+- Termine par : Mohammed Batar; batarmohamed.03@email.com; +212 695-008079; LinkedIn et GitHub uniquement si utiles a l'offre.
+
+OFFRE À ANALYSER :
+
+Titre : ${job.title || 'Non précisé'}
+Entreprise : ${job.company || 'Non précisé'}
+Localisation : ${job.location || 'Non précisé'}
+Description : ${cleanDescription}
+Source : ${job.source || 'Non précisé'}
+URL : ${job.url || 'Non précisé'}
+`;
+
+  const responseSchema = {
+    type: 'object',
+    properties: {
+      match_score: {
+        type: 'integer',
+        minimum: 1,
+        maximum: 10
+      },
+      match_reason: {
+        type: 'string'
+      },
+      gaps: {
+        type: 'array',
+        items: {
+          type: 'string'
+        }
+      },
+      remote: {
+        type: 'boolean'
+      },
+      classification: {
+        type: 'object',
+        properties: {
+          domaine: { type: 'string', enum: ['cybersecurity', 'it_operations', 'software_development', 'grc_finance', 'other'] },
+          niveau: { type: 'string', enum: ['intern', 'junior', 'mid', 'senior', 'lead', 'unknown'] },
+          contrat: { type: 'string', enum: ['internship', 'apprenticeship', 'permanent', 'fixed_term', 'freelance', 'unknown'] },
+          mode_travail: { type: 'string', enum: ['remote', 'hybrid', 'onsite', 'unknown'] },
+          zone: { type: 'string', enum: ['morocco', 'remote_eligible', 'france_internship', 'other', 'unknown'] },
+          decision: { type: 'string', enum: ['strong_match', 'review', 'reject'] }
+        },
+        required: ['domaine', 'niveau', 'contrat', 'mode_travail', 'zone', 'decision'],
+        additionalProperties: false
+      },
+      cv_recommande: {
+        type: 'string',
+        enum: [
+          'cv_thales',
+          'cv_cfg',
+          'cv_cegid',
+          'cv_exploitation',
+          'cv_general'
+        ]
+      },
+      fiche: {
+        type: 'object',
+        properties: {
+          poste: {
+            type: 'string'
+          },
+          entreprise: {
+            type: 'string'
+          },
+          localisation: {
+            type: 'string'
+          },
+          type_contrat: {
+            type: 'string'
+          },
+          salaire: {
+            type: 'string'
+          },
+          competences_requises: {
+            type: 'array',
+            items: {
+              type: 'string'
+            }
+          },
+          points_forts: {
+            type: 'array',
+            items: {
+              type: 'string'
+            }
+          },
+          langue_requise: {
+            type: 'string'
+          }
+        },
+        required: [
+          'poste',
+          'entreprise',
+          'localisation',
+          'type_contrat',
+          'salaire',
+          'competences_requises',
+          'points_forts',
+          'langue_requise'
+        ],
+        additionalProperties: false
+      },
+      draft_email: {
+        type: 'object',
+        properties: {
+          objet: {
+            type: 'string'
+          },
+          corps: {
+            type: 'string'
+          }
+        },
+        required: [
+          'objet',
+          'corps'
+        ],
+        additionalProperties: false
+      }
+    },
+    required: [
+      'match_score',
+      'match_reason',
+      'gaps',
+      'remote',
+      'classification',
+      'cv_recommande',
+      'fiche',
+      'draft_email'
+    ],
+    additionalProperties: false
+  };
 
   try {
+    if (!process.env.GROQ_API_KEY) {
+      throw new Error('GROQ_API_KEY is missing from environment variables');
+    }
+
     const response = await axios.post(
       'https://api.groq.com/openai/v1/chat/completions',
       {
-        model: 'llama-3.3-70b-versatile',
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.3,
+        model: 'openai/gpt-oss-120b',
+        messages: [
+
+
+
+
+
+          {
+            role: 'system',
+            content:
+              'Analyse les offres d’emploi selon les règles fournies. Réponds exclusivement avec les données correspondant au JSON Schema.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        temperature: 0.2,
+        response_format: {
+          type: 'json_schema',
+          json_schema: {
+            name: 'job_analysis',
+            strict: true,
+            schema: responseSchema
+          }
+        }
       },
       {
         headers: {
-          'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
-          'Content-Type': 'application/json',
-        }
+          Authorization: 'Bearer ' + (process.env.GROQ_API_KEY || ''),
+          'Content-Type': 'application/json'
+        },
+        timeout: 60000
       }
     );
 
-    const text = response.data.choices[0].message.content;
-    const clean = text.replace(/```json|```/g, '').trim();
-    const analysis = JSON.parse(clean);
-    analysis.match_score = parseInt(analysis.match_score);
+    const text = response.data?.choices?.[0]?.message?.content;
+
+    if (!text) {
+      throw new Error('Empty response from Groq');
+    }
+
+    const analysis = JSON.parse(text);
+
+    analysis.match_score = parseInt(analysis.match_score, 10);
+
+    if (
+      Number.isNaN(analysis.match_score) ||
+      analysis.match_score < 1 ||
+      analysis.match_score > 10
+    ) {
+      throw new Error(`Invalid match_score: ${analysis.match_score}`);
+    }
+
     return analysis;
 
+
   } catch (err) {
-    console.error('Groq error:', JSON.stringify(err.response?.data) || err.message);
+    console.error(
+      'Groq error:',
+      err.response?.data || err.message
+    );
     return null;
+
   }
 }
 
-module.exports = { analyzeJob };
+module.exports = {
+  analyzeJob
+};
