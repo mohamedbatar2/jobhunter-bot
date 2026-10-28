@@ -27,5 +27,8 @@ n8n-data/config
 .DS_Store
 Thumbs.db
 *.log
+*.pid
+.bot.pid
 {code
 New Text Document.txt
+

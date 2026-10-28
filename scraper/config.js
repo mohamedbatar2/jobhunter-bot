@@ -10,7 +10,9 @@ module.exports = {
         'Technicien Informatique', 'Helpdesk', 'Support IT',
         'Administrateur Systèmes et Réseaux', 'Gestion de parc informatique',
         'Technicien Réseau', 'GLPI', 'Technicien maintenance informatique',
-        'Stage Systèmes et Réseaux', 'Stage Informatique'
+        'Stage Systèmes et Réseaux', 'Stage Informatique',
+        'Junior .NET Developer', 'Développeur C#', 'ASP.NET Core',
+        'Développeur Backend', 'Développeur Python', 'Développeur API'
     ],
     locations: ['Casablanca', 'Rabat', 'Maroc', 'Remote'],
     contractTypes: ['CDI', 'CDD', 'Stage', 'Alternance', 'CI'],

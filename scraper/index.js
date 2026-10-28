@@ -3,6 +3,7 @@ const { scrapeLinkedIn } = require('./scrapers/linkedin');
 const { scrapeRekrute } = require('./scrapers/rekrute');
 const { scrapeIndeed } = require('./scrapers/indeed');
 const { scrapeAlkhdma } = require('./scrapers/alkhdma');
+const { scrapeEmploiPublic } = require('./scrapers/emploi_public');
 const { sendMessage, startPolling, formatJobNotification } = require('./telegram');
 const { appendToExcel, getRecentJobs, getAllJobs: getExcelHistoryJobs } = require('./excel');
 const { fetchJobDescriptions } = require('./history');
@@ -10,6 +11,24 @@ const { analyzeJob } = require('./groq');
 const { isNew, markSeen, getStats, getAllJobs: getDatabaseJobs } = require('./db');
 const config = require('./config');
 const http = require('http');
+const fs = require('fs');
+const path = require('path');
+
+// Store process PID for shutdown coordination
+const pidFile = path.join(__dirname, '.bot.pid');
+try {
+  fs.writeFileSync(pidFile, String(process.pid));
+} catch (_) {}
+
+function removePidFile() {
+  try {
+    if (fs.existsSync(pidFile)) fs.unlinkSync(pidFile);
+  } catch (_) {}
+}
+
+process.on('exit', removePidFile);
+process.on('SIGINT', () => { removePidFile(); process.exit(0); });
+process.on('SIGTERM', () => { removePidFile(); process.exit(0); });
 
 let isScrapingRunning = false;
 let isHistoryRunning = false;
@@ -47,8 +66,9 @@ async function runScraper(options = {}) {
     const rekruteJobs = await scrapeRekrute();
     const indeedJobs = await scrapeIndeed();
     const alkhdmaJobs = await scrapeAlkhdma();
+    const emploiPublicJobs = await scrapeEmploiPublic();
 
-    const allJobs = [...linkedinJobs, ...rekruteJobs, ...indeedJobs, ...alkhdmaJobs];
+    const allJobs = [...linkedinJobs, ...rekruteJobs, ...indeedJobs, ...alkhdmaJobs, ...emploiPublicJobs];
     console.log(`Found ${allJobs.length} total jobs`);
 
     let newJobsCount = 0;
@@ -177,17 +197,30 @@ async function reviewHistory(chatId) {
 // Default schedule: 08:00 and 20:00 Casablanca
 setSchedule('0 8,20 * * *', 'Tous les jours à 08:00 et 20:00 (Casablanca)');
 
-// HTTP Webhook server for external triggers
+// HTTP Webhook server for external triggers & shutdown
 const server = http.createServer(async (req, res) => {
   if (req.url === '/run' && req.method === 'POST') {
     res.writeHead(200);
     res.end('Scraper triggered');
     runScraper();
+  } else if ((req.url === '/shutdown' || req.url === '/api/shutdown') && req.method === 'POST') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ success: true, message: 'Scraper & Bot (index.js) arrêté avec succès.' }));
+    console.log('\n[Index] Arrêt demandé via Webhook. Fermeture du bot et du scraper...');
+    setTimeout(() => {
+      removePidFile();
+      server.close(() => {
+        console.log('[Index] Serveur Webhook fermé proprement.');
+        process.exit(0);
+      });
+      setTimeout(() => process.exit(0), 1000);
+    }, 300);
   } else {
     res.writeHead(404);
     res.end('Not found');
   }
 });
+
 
 server.on('error', (err) => {
   if (err.code === 'EADDRINUSE') {
@@ -252,7 +285,7 @@ Vous pouvez aussi lancer une recherche manuelle à tout moment avec la commande 
       await sendMessage('⏳ Une recherche d\'offres est déjà en cours. Merci de patienter...', chatId);
       return;
     }
-    await sendMessage('🚀 *Lancement immédiat du scraping...*\nRecherche en cours sur LinkedIn, Rekrute, Indeed et Alkhdma. Les nouvelles offres s\'afficheront ici.', chatId);
+    await sendMessage('🚀 *Lancement immédiat du scraping...*\nRecherche en cours sur LinkedIn, Rekrute, Indeed, Alkhdma et EmploiPublic. Les nouvelles offres s\'afficheront ici.', chatId);
     runScraper({ chatId });
   },
 

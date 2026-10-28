@@ -62,9 +62,28 @@ function formatJobNotification(job, analysis) {
   const pointsForts = formatList(f.points_forts);
   const requis = formatList(f.competences_requises);
 
+  const trackLabels = {
+    cybersecurity: 'Cybersécurité',
+    software_development: 'Développement Logiciel',
+    it_operations: 'Opérations & Support IT',
+    grc_finance: 'GRC & Finance',
+    other: 'Autre IT'
+  };
+  const targetLabels = {
+    primary_target: 'Cible principale',
+    secondary_target: 'Filière secondaire',
+    opportunistic: 'Opportunité'
+  };
+
+  const trackKey = analysis.career_track || classification.domaine;
+  const trackName = trackLabels[trackKey] || trackKey || 'IT';
+  const targetDesc = targetLabels[analysis.target_type] || analysis.target_type || '';
+  const trackLine = `🎯 Filière: ${trackName}${targetDesc ? ' (' + targetDesc + ')' : ''}${analysis.cv_recommande ? ' | 📎 ' + analysis.cv_recommande : ''}`;
+
   const lines = [
     `${icon} ${title}`,
     `🏢 ${company}`,
+    trackLine,
     `📄 ${contrat} | 💰 ${salaire}`,
     `⭐ Match: ${score}/10 — ${reason}`,
     `✅ Points forts:${pointsForts ? ' ' + pointsForts : ''}`,

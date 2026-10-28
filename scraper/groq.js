@@ -46,7 +46,7 @@ IMPORTANT — RÈGLES DE FIABILITÉ :
 PROFIL CANDIDAT :
 
 Mohammed Batar
-Localisation : Casablanca, Maroc. Coordonnees : batarmohamed.03@email.com, +212 695-008079, LinkedIn Mohammed Batar, github.com/mohamedbatar2.
+Localisation : Casablanca, Maroc. Coordonnees : batarmohamed.03@gmail.com, +212 695-008079, LinkedIn Mohammed Batar, github.com/mohamedbatar2.
 Positionnement : professionnel IT/cybersecurite avec experience pratique en support, operations SIEM, securite reseau et applicative. Ne le presente pas comme "etudiant en ingenierie cybersecurite" ou ne mets son statut d'etudiant en avant.
 
 EXPERIENCE PROFESSIONNELLE (a privilegier dans le scoring et les emails, avant les certifications) :
@@ -79,8 +79,36 @@ Plafonds objectifs :
 - Poste hors Maroc sans remote explicitement indique : score maximum 3.
 - Alternance en France exigeant une residence en France : score maximum 3. Un stage en France peut etre envisage car une convention CNAM est disponible; ne presume pas que les conditions administratives ou de deplacement sont remplies.
 - Plus de 3 ans d'experience obligatoire sans ouverture aux profils moins experimentes : score maximum 3.
-- Poste logiciel sans lien avec C#/.NET, ASP.NET Core ou API : score maximum 3.
 - Anglais bilingue/C1-C2 obligatoire au quotidien : score maximum 4.
+
+DÉVELOPPEMENT LOGICIEL :
+- Évalue les offres de développement indépendamment des offres de cybersécurité.
+- Priorité : C#/.NET, ASP.NET Core, backend, API REST, intégration logicielle et Python backend.
+- Pour chaque technologie, distingue l'expérience professionnelle, les projets personnels et les connaissances déclarées.
+- Ne plafonne pas automatiquement le score d'une offre Python parce qu'elle n'utilise pas C#/.NET.
+- Pour Java, PHP, JavaScript/TypeScript, React, mobile, data engineering ou d'autres stacks, évalue les compétences réellement transférables et les exigences obligatoires.
+- N'attribue pas un score élevé sur la seule base de compétences générales en programmation si des technologies essentielles manquent.
+- Un poste senior, exigeant une expérience obligatoire non satisfaite, doit être évalué selon les critères d'éligibilité existants.
+
+VÉRIFICATIONS ET PREUVES DE DÉVELOPPEMENT LOGICIEL :
+- Identifie les langages de programmation et frameworks explicitement requis dans l'offre.
+- Vérifie si le rôle concerne le backend, le frontend, le full-stack, les APIs, les intégrations, les tests, la maintenance ou l'architecture.
+- Traite les technologies telles que React, Angular, Java, les plateformes cloud et le CI/CD comme absentes/manquantes sauf si le profil les justifie explicitement.
+- Distingue clairement la création d'un projet personnel/académique du maintien ou du développement d'une application en production.
+- N'assimile jamais les tests de sécurité API (ex. FinAudit) à une vaste expérience de développement d'APIs en production.
+- L'expérience CFCA Maroc constitue une expérience professionnelle en intégration REST C#/.NET et SQL, tandis que FinAudit (Python) et BankingApp (ASP.NET Core) sont des projets applicatifs / labs.
+
+RECOMMANDATION DE FILIÈRE ET CIBLAGE (career_track & target_type) :
+- Indique career_track parmi :
+  * "cybersecurity" : SOC, Blue Team, sécurité réseau/système/OT, sécurité applicative.
+  * "software_development" : C#/.NET, ASP.NET Core, backend, APIs REST, intégration logicielle, Python backend.
+  * "it_operations" : Support L1/L2, helpdesk, systèmes, réseaux, administration infrastructure.
+  * "grc_finance" : Risques, conformité, audit SI, support ERP financier.
+  * "other" : Autre domaine IT.
+- Indique target_type selon la stratégie de ciblage :
+  * "primary_target" : Priorité principale (cybersécurité opérationnelle, Blue Team, SOC, sécurité réseau/OT/API).
+  * "secondary_target" : Deuxième filière délibérée (postes de développement junior .NET / C#, ASP.NET Core backend, junior API / intégration, ou Python backend correspondant au profil).
+  * "opportunistic" : Candidature d'opportunité (postes full-stack avec frontend accessible, support IT transverse, ou rôles avec compétences transférables).
 
 Ne penalise pas automatiquement une technologie secondaire qui peut s'apprendre. Distingue l'experience professionnelle des etudes et projets. Une competence obligatoire pese plus qu'une competence souhaitee.
 REMOTE : true uniquement si le teletravail/remote/hybride est explicitement indique; sinon false.
@@ -89,10 +117,11 @@ Classification : domaine parmi cybersecurity, it_operations, software_developmen
 CHOIX DU CV :
 - cv_thales : SOC, cyberdefense, Blue Team, SIEM, threat detection.
 - cv_cfg : GRC, audit SI, risques, conformite, EBIOS/ISO 27005, banque et finance.
-- cv_cegid : ASP.NET Core, .NET, backend et API.
+- cv_cegid : C#, .NET, ASP.NET Core, APIs REST, backend.
+- cv_python_backend : developpement Python backend et APIs REST (base sur le projet FinAudit).
 - cv_exploitation : operations IT, infrastructure, systemes et support.
 - cv_general : poste mixte ou autre.
-Choisis selon les missions principales. cv_recommande doit etre exactement l'une de ces cinq cles.
+Choisis selon les missions principales. cv_recommande doit etre exactement l'une de ces six cles.
 
 EMAIL :
 - Ecris un email professionnel et concis de 150 mots maximum dans la langue dominante de l'offre.
@@ -100,7 +129,7 @@ EMAIL :
 - N'invente pas d'experience, de destinataire ou de salaire.
 - Si aucun recruteur n'est nomme, commence par Bonjour Madame, Monsieur ou Dear Hiring Manager.
 - Mentionne le CV en piece jointe.
-- Termine par : Mohammed Batar; batarmohamed.03@email.com; +212 695-008079; LinkedIn et GitHub uniquement si utiles a l'offre.
+- Termine par : Mohammed Batar; batarmohamed.03@gmail.com; +212 695-008079; LinkedIn et GitHub uniquement si utiles a l'offre.
 
 OFFRE À ANALYSER :
 
@@ -132,6 +161,24 @@ URL : ${job.url || 'Non précisé'}
       remote: {
         type: 'boolean'
       },
+      career_track: {
+        type: 'string',
+        enum: [
+          'cybersecurity',
+          'software_development',
+          'it_operations',
+          'grc_finance',
+          'other'
+        ]
+      },
+      target_type: {
+        type: 'string',
+        enum: [
+          'primary_target',
+          'secondary_target',
+          'opportunistic'
+        ]
+      },
       classification: {
         type: 'object',
         properties: {
@@ -151,6 +198,7 @@ URL : ${job.url || 'Non précisé'}
           'cv_thales',
           'cv_cfg',
           'cv_cegid',
+          'cv_python_backend',
           'cv_exploitation',
           'cv_general'
         ]
@@ -223,6 +271,8 @@ URL : ${job.url || 'Non précisé'}
       'match_reason',
       'gaps',
       'remote',
+      'career_track',
+      'target_type',
       'classification',
       'cv_recommande',
       'fiche',

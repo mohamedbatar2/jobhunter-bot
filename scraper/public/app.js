@@ -254,7 +254,7 @@ function renderDashboardOpportunities(jobs) {
           <button class="btn btn-secondary btn-sm" onclick="navigateToJob('${job.id}')">
             Détails
           </button>
-          <a href="${escapeHtml(job.url || '#')}" target="_blank" rel="noopener noreferrer" class="btn btn-emerald btn-sm" onclick="promptApplyAfterClick('${job.id}')">
+          <a href="${escapeHtml(job.url || '#')}" target="_blank" rel="noopener noreferrer" class="btn btn-emerald btn-sm" id="btn-top-apply-${job.id}" onclick="handleApplyClick('${job.id}', event)">
             Postuler ↗
           </a>
         </div>
@@ -522,10 +522,11 @@ function renderJobCardHtml(job) {
       </div>
 
       <div class="card-footer">
-        <div>
+        <div id="status-badge-${job.id}">
           ${job.application_status ? `
-            <span class="applied-status-badge" style="background: rgba(99, 102, 241, 0.2); color: #a5b4fc; border: 1px solid rgba(99, 102, 241, 0.4);">
+            <span class="applied-status-badge">
               ✓ ${escapeHtml(job.application_status)}
+              ${job.application_applied_at ? `<small class="applied-time">${formatDateTime(job.application_applied_at)}</small>` : ''}
             </span>
           ` : `
             <span style="font-size: 0.75rem; color: var(--text-dim);">Non postulé</span>
@@ -536,8 +537,8 @@ function renderJobCardHtml(job) {
           <button class="btn btn-secondary btn-sm" onclick="navigateToJob('${job.id}')">
             Détail
           </button>
-          <a href="${escapeHtml(job.url || '#')}" target="_blank" rel="noopener noreferrer" class="btn btn-emerald btn-sm" onclick="promptApplyAfterClick('${job.id}')">
-            Postuler ↗
+          <a href="${escapeHtml(job.url || '#')}" target="_blank" rel="noopener noreferrer" class="btn btn-emerald btn-sm" id="btn-apply-${job.id}" onclick="handleApplyClick('${job.id}', event)">
+            ${job.application_status === 'Postulé' ? 'Postulé ↗' : 'Postuler ↗'}
           </a>
         </div>
       </div>
@@ -566,15 +567,16 @@ function renderJobTableRowHtml(job) {
       <td>${escapeHtml(job.contract_type || 'Non précisé')}</td>
       <td>
         ${job.application_status ? `
-          <span class="applied-status-badge" style="background: rgba(99, 102, 241, 0.2); color: #a5b4fc;">
-            ${escapeHtml(job.application_status)}
+          <span class="applied-status-badge">
+            ✓ ${escapeHtml(job.application_status)}
+            ${job.application_applied_at ? `<br><small class="applied-time">${formatDateTime(job.application_applied_at)}</small>` : ''}
           </span>
         ` : '<span style="color:var(--text-dim); font-size:0.8rem;">-</span>'}
       </td>
       <td>
         <div style="display:flex; gap:0.4rem;">
           <button class="btn btn-secondary btn-sm" onclick="navigateToJob('${job.id}')">Fiche</button>
-          <a href="${escapeHtml(job.url || '#')}" target="_blank" rel="noopener noreferrer" class="btn btn-emerald btn-sm" onclick="promptApplyAfterClick('${job.id}')">
+          <a href="${escapeHtml(job.url || '#')}" target="_blank" rel="noopener noreferrer" class="btn btn-emerald btn-sm" id="btn-table-apply-${job.id}" onclick="handleApplyClick('${job.id}', event)">
             Postuler ↗
           </a>
         </div>
@@ -623,7 +625,7 @@ function renderJobDetailView(job) {
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
       <span>${job.application_id ? 'Modifier Statut Suivi' : 'Ajouter au Suivi'}</span>
     </button>
-    <a href="${escapeHtml(job.url || '#')}" target="_blank" rel="noopener noreferrer" class="btn btn-emerald btn-sm" onclick="promptApplyAfterClick('${job.id}')">
+    <a href="${escapeHtml(job.url || '#')}" target="_blank" rel="noopener noreferrer" class="btn btn-emerald btn-sm" id="btn-detail-apply" onclick="handleApplyClick('${job.id}', event)">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
       <span>Postuler sur ${escapeHtml(job.source)}</span>
     </a>
@@ -669,19 +671,31 @@ function renderJobDetailView(job) {
         <span class="detail-meta-item">
           <strong>Date d'indexation :</strong> ${escapeHtml(job.date_scraped || new Date(job.seen_at).toLocaleDateString('fr-FR'))}
         </span>
+        <span class="detail-meta-item" id="detail-meta-status">
+          <strong>Statut :</strong>
+          ${job.application_status ? `
+            <span class="applied-status-badge">✓ ${escapeHtml(job.application_status)} ${job.application_applied_at ? `<small class="applied-time">${formatDateTime(job.application_applied_at)}</small>` : ''}</span>
+          ` : '<span style="color:var(--text-dim); font-size:0.85rem;">Non postulé</span>'}
+        </span>
       </div>
 
       <!-- MAIN APPLY CALL TO ACTION BANNER -->
       <div class="detail-cta-bar">
         <div class="cta-left">
           <h4>Prêt à postuler à cette opportunité ?</h4>
-          <p>Le lien officiel de l'annonce va s'ouvrir dans un nouvel onglet. Vous pourrez ensuite enregistrer la date et vos notes de candidature.</p>
+          <p>Le lien officiel de l'annonce va s'ouvrir dans un nouvel onglet et l'heure exacte de votre candidature s'enregistre automatiquement dans le système.</p>
         </div>
-        <a href="${escapeHtml(job.url || '#')}" target="_blank" rel="noopener noreferrer" class="btn-apply-big" onclick="promptApplyAfterClick('${job.id}')">
+        <a href="${escapeHtml(job.url || '#')}" target="_blank" rel="noopener noreferrer" class="btn-apply-big" id="btn-cta-apply" onclick="handleApplyClick('${job.id}', event)">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
           <span>Postuler sur le site de l'offre</span>
         </a>
       </div>
+      ${job.application_applied_at ? `
+        <div class="applied-banner-confirmed" id="detail-cta-applied-banner">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          <span>Candidature enregistrée automatiquement le <strong>${formatDateTime(job.application_applied_at)}</strong></span>
+        </div>
+      ` : '<div id="detail-cta-applied-banner"></div>'}
     </div>
 
     <!-- Score & Analysis Card -->
@@ -762,13 +776,119 @@ function renderJobDetailView(job) {
   `;
 }
 
-function promptApplyAfterClick(jobId) {
-  setTimeout(() => {
-    const job = state.currentJobDetail || state.jobs.find(j => j.id === jobId);
-    if (job) {
-      openApplicationModalForJob(job.id, job.title, job.company);
+function formatDateTime(val) {
+  if (!val) return '-';
+  const d = new Date(val);
+  if (isNaN(d.getTime())) return String(val);
+  const datePart = d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const timePart = d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  return `${datePart} à ${timePart}`;
+}
+
+function formatForDateTimeLocal(val) {
+  if (!val) return '';
+  const d = new Date(val);
+  if (isNaN(d.getTime())) return '';
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function updateJobCardStatusDOM(jobId, status, appliedAt) {
+  const badge = document.getElementById(`status-badge-${jobId}`);
+  if (badge) {
+    badge.innerHTML = `
+      <span class="applied-status-badge">
+        ✓ ${escapeHtml(status)}
+        ${appliedAt ? `<small class="applied-time">${formatDateTime(appliedAt)}</small>` : ''}
+      </span>
+    `;
+  }
+  const btn = document.getElementById(`btn-apply-${jobId}`);
+  if (btn) btn.textContent = 'Postulé ↗';
+  const btnTop = document.getElementById(`btn-top-apply-${jobId}`);
+  if (btnTop) btnTop.textContent = 'Postulé ↗';
+  const btnTable = document.getElementById(`btn-table-apply-${jobId}`);
+  if (btnTable) btnTable.textContent = 'Postulé ↗';
+}
+
+function updateJobDetailAppliedUI(job) {
+  const metaStatus = document.getElementById('detail-meta-status');
+  if (metaStatus) {
+    metaStatus.innerHTML = `
+      <strong>Statut :</strong>
+      <span class="applied-status-badge">✓ Postulé <small class="applied-time">${formatDateTime(job.application_applied_at)}</small></span>
+    `;
+  }
+  const banner = document.getElementById('detail-cta-applied-banner');
+  if (banner) {
+    banner.className = 'applied-banner-confirmed';
+    banner.innerHTML = `
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Candidature enregistrée automatiquement le <strong>${formatDateTime(job.application_applied_at)}</strong></span>
+    `;
+  }
+}
+
+async function handleApplyClick(jobId, event) {
+  const now = new Date();
+  const appliedAtIso = now.toISOString();
+  const formattedTime = formatDateTime(appliedAtIso);
+
+  // 1. Instantly update local state in memory
+  const job = (state.jobs && state.jobs.find(j => j.id === jobId)) || state.currentJobDetail;
+  if (job) {
+    job.application_status = 'Postulé';
+    job.application_applied_at = appliedAtIso;
+  }
+  if (state.currentJobDetail && state.currentJobDetail.id === jobId) {
+    state.currentJobDetail.application_status = 'Postulé';
+    state.currentJobDetail.application_applied_at = appliedAtIso;
+    updateJobDetailAppliedUI(state.currentJobDetail);
+  }
+
+  // 2. Immediate visual DOM update
+  updateJobCardStatusDOM(jobId, 'Postulé', appliedAtIso);
+
+  // 3. User feedback toast
+  showToast(`🕒 Candidature & heure enregistrées : ${formattedTime}`, 'success');
+
+  // 4. Persist to backend database
+  try {
+    const res = await fetchApi(`/api/jobs/${jobId}/apply`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        status: 'Postulé',
+        applied_at: appliedAtIso,
+        notes: `Candidature enregistrée automatiquement le ${formattedTime}.`
+      })
+    });
+
+    if (res && res.success && res.application) {
+      if (job) {
+        job.application_id = res.application.id;
+        job.application_applied_at = res.application.applied_at;
+      }
+      loadStats();
+      if (state.currentView === 'applications') {
+        loadApplications();
+      }
     }
-  }, 1000);
+  } catch (err) {
+    console.error('Erreur enregistrement automatique:', err);
+  }
+
+  // 5. Open follow-up modal pre-filled with the auto-recorded time
+  setTimeout(() => {
+    const targetJob = (state.jobs && state.jobs.find(j => j.id === jobId)) || state.currentJobDetail;
+    if (targetJob) {
+      openApplicationModalForJob(targetJob.id, targetJob.title, targetJob.company);
+    }
+  }, 1400);
+}
+
+function promptApplyAfterClick(jobId, event) {
+  handleApplyClick(jobId, event);
 }
 
 function copyEmailDraft() {
@@ -926,6 +1046,13 @@ function renderKanbanCardHtml(app) {
         </div>
       ` : ''}
 
+      ${app.applied_at ? `
+        <div style="font-size:0.75rem; color:#38bdf8; margin:0.35rem 0; display:flex; align-items:center; gap:0.35rem;">
+          <span>🕒</span>
+          <span><strong>Postulé :</strong> ${formatDateTime(app.applied_at)}</span>
+        </div>
+      ` : ''}
+
       ${app.interview_date ? `
         <div style="font-size:0.75rem; color:#a5b4fc; margin:0.35rem 0;">
           📅 <strong>RDV :</strong> ${new Date(app.interview_date).toLocaleString('fr-FR', { dateStyle:'short', timeStyle:'short' })}
@@ -997,8 +1124,8 @@ function renderAtsTable(apps) {
           ${escapeHtml(app.next_step || app.notes || '-')}
         </div>
       </td>
-      <td style="font-size:0.82rem; color:var(--text-dim);">
-        ${app.applied_at ? new Date(app.applied_at).toLocaleDateString('fr-FR') : '-'}
+      <td style="font-size:0.82rem; color:var(--text-dim); font-family:var(--font-mono);">
+        ${app.applied_at ? formatDateTime(app.applied_at) : '-'}
       </td>
       <td>
         <div style="display:flex; gap:0.4rem;">
@@ -1013,14 +1140,22 @@ function renderAtsTable(apps) {
 // 1-Click Status Update API Call
 async function quickUpdateAppStatus(appId, newStatus) {
   try {
+    const payload = { status: newStatus };
+    if (newStatus === 'Postulé' || newStatus === 'Applied') {
+      payload.applied_at = new Date().toISOString();
+    }
     const res = await fetchApi(`/api/applications/${appId}/status`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: newStatus })
+      body: JSON.stringify(payload)
     });
 
     if (res.success) {
-      showToast(`Statut mis à jour : "${newStatus}"`, 'success');
+      if ((newStatus === 'Postulé' || newStatus === 'Applied') && payload.applied_at) {
+        showToast(`Statut mis à jour : "Postulé" (Heure : ${formatDateTime(payload.applied_at)})`, 'success');
+      } else {
+        showToast(`Statut mis à jour : "${newStatus}"`, 'success');
+      }
       loadApplications();
       loadStats();
     }
@@ -1049,15 +1184,20 @@ async function deleteApplicationPrompt(appId) {
 // ==========================================================================
 
 function openApplicationModalForJob(jobId, jobTitle, jobCompany) {
-  document.getElementById('modal-app-title').textContent = 'Ajouter au Suivi des Candidatures';
-  document.getElementById('app-id').value = '';
+  const job = (state.jobs && state.jobs.find(j => j.id === jobId)) || state.currentJobDetail;
+  const appliedDate = (job && job.application_applied_at) ? job.application_applied_at : new Date().toISOString();
+
+  document.getElementById('modal-app-title').textContent = 'Suivi de la Candidature (Enregistrée)';
+  document.getElementById('app-id').value = (job && job.application_id) || '';
   document.getElementById('app-job-id').value = jobId;
   document.getElementById('app-job-title').value = `${jobTitle} (${jobCompany})`;
-  document.getElementById('app-status').value = 'Postulé';
-  document.getElementById('app-cv-version').value = 'cv_thales';
+  document.getElementById('app-status').value = (job && job.application_status) || 'Postulé';
+  document.getElementById('app-cv-version').value = (job && job.cv_recommended) || 'cv_thales';
   document.getElementById('app-next-step').value = 'Relance dans 7 jours';
   document.getElementById('app-interview-date').value = '';
-  document.getElementById('app-notes').value = 'Candidature soumise via le portail officiel.';
+  const appliedInput = document.getElementById('app-applied-at');
+  if (appliedInput) appliedInput.value = formatForDateTimeLocal(appliedDate);
+  document.getElementById('app-notes').value = (job && job.application_notes) || `Candidature soumise le ${formatDateTime(appliedDate)}.`;
 
   document.getElementById('modal-app').style.display = 'flex';
 }
@@ -1074,6 +1214,8 @@ function openApplicationModal(appId) {
   document.getElementById('app-cv-version').value = app.cv_version || 'cv_thales';
   document.getElementById('app-next-step').value = app.next_step || '';
   document.getElementById('app-interview-date').value = app.interview_date ? app.interview_date.slice(0, 16) : '';
+  const appliedInput = document.getElementById('app-applied-at');
+  if (appliedInput) appliedInput.value = app.applied_at ? formatForDateTimeLocal(app.applied_at) : '';
   document.getElementById('app-notes').value = app.notes || '';
 
   document.getElementById('modal-app').style.display = 'flex';
@@ -1092,7 +1234,13 @@ async function handleApplicationSubmit(event) {
   const cvVersion = document.getElementById('app-cv-version').value;
   const nextStep = document.getElementById('app-next-step').value;
   const interviewDate = document.getElementById('app-interview-date').value;
+  const appliedAtInput = document.getElementById('app-applied-at')?.value;
   const notes = document.getElementById('app-notes').value;
+
+  let appliedAt = appliedAtInput ? new Date(appliedAtInput).toISOString() : null;
+  if (!appliedAt && (status === 'Postulé' || status === 'Applied')) {
+    appliedAt = new Date().toISOString();
+  }
 
   const payload = {
     id: appId || ('app_' + Date.now()),
@@ -1101,6 +1249,7 @@ async function handleApplicationSubmit(event) {
     cv_version: cvVersion,
     next_step: nextStep,
     interview_date: interviewDate || null,
+    applied_at: appliedAt,
     notes
   };
 
@@ -1410,7 +1559,144 @@ function setupActionButtons() {
       openApplicationModalForJob('', 'Candidature Spontanée / Externe', 'Nouvelle Entreprise');
     });
   }
+
+  const appStatusSelect = document.getElementById('app-status');
+  if (appStatusSelect) {
+    appStatusSelect.addEventListener('change', (e) => {
+      if (e.target.value === 'Postulé') {
+        const appliedInput = document.getElementById('app-applied-at');
+        if (appliedInput && !appliedInput.value) {
+          appliedInput.value = formatForDateTimeLocal(new Date());
+        }
+      }
+    });
+  }
+
+  const btnShutdown = document.getElementById('btn-shutdown');
+  if (btnShutdown) {
+    btnShutdown.addEventListener('click', openShutdownModal);
+  }
+
+  const btnConfirmShutdown = document.getElementById('btn-confirm-shutdown');
+  if (btnConfirmShutdown) {
+    btnConfirmShutdown.addEventListener('click', handleShutdownServer);
+  }
 }
+
+// ==========================================================================
+// SERVER SHUTDOWN CONTROLS
+// ==========================================================================
+
+function openShutdownModal() {
+  const modal = document.getElementById('modal-shutdown');
+  if (modal) {
+    modal.style.display = 'flex';
+  }
+}
+
+function closeShutdownModal() {
+  const modal = document.getElementById('modal-shutdown');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+}
+
+window.openShutdownModal = openShutdownModal;
+window.closeShutdownModal = closeShutdownModal;
+
+async function handleShutdownServer() {
+  const btnConfirm = document.getElementById('btn-confirm-shutdown');
+  const btnShutdownHeader = document.getElementById('btn-shutdown');
+  const modalBody = document.getElementById('modal-shutdown-body');
+
+  if (btnConfirm) {
+    btnConfirm.disabled = true;
+    btnConfirm.innerHTML = `<span>Arrêt en cours...</span>`;
+  }
+
+  showToast('Demande d\'arrêt du serveur envoyée...', 'info');
+
+  try {
+    const res = await fetch('/api/server/shutdown', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    const data = await res.json().catch(() => ({ success: true }));
+
+    if (btnShutdownHeader) {
+      btnShutdownHeader.disabled = true;
+      btnShutdownHeader.classList.remove('btn-outline-danger');
+      btnShutdownHeader.classList.add('btn-secondary');
+      btnShutdownHeader.innerHTML = `
+        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#f43f5e;margin-right:4px;"></span>
+        <span>Hors ligne</span>
+      `;
+    }
+
+    if (modalBody) {
+      modalBody.innerHTML = `
+        <div style="text-align:center; padding:1.25rem 0.5rem;">
+          <div style="width:58px; height:58px; border-radius:50%; background:rgba(244, 63, 94, 0.15); border:2px solid #f43f5e; color:#f43f5e; display:inline-flex; align-items:center; justify-content:center; margin-bottom:1.25rem;">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path>
+              <line x1="12" y1="2" x2="12" y2="12"></line>
+            </svg>
+          </div>
+          <h3 style="color:#fff; font-size:1.25rem; font-weight:700; margin-bottom:0.6rem;">Système Arrêté avec Succès</h3>
+          <p style="color:var(--text-muted); font-size:0.92rem; line-height:1.6; margin-bottom:1.5rem;">
+            Le serveur Dashboard et le robot de scraping (index.js) ont été arrêtés proprement.<br>
+            Vous pouvez fermer cet onglet en toute sécurité.
+          </p>
+          <div style="background:rgba(0,0,0,0.4); border:1px solid var(--border-subtle); padding:0.85rem 1rem; border-radius:8px; font-family:var(--font-mono); font-size:0.85rem; color:#38bdf8; margin-bottom:1.5rem; text-align:left;">
+            <div style="color:var(--text-dim); font-size:0.75rem; margin-bottom:0.35rem;">Pour relancer le système complet :</div>
+            <code>start_dashboard.bat</code>
+          </div>
+          <div style="display:flex; justify-content:center; gap:0.75rem;">
+            <button class="btn btn-secondary" onclick="window.close()">Fermer l'onglet</button>
+          </div>
+        </div>
+      `;
+    }
+
+    showToast('Serveur arrêté avec succès', 'success');
+  } catch (err) {
+    if (btnShutdownHeader) {
+      btnShutdownHeader.disabled = true;
+      btnShutdownHeader.classList.remove('btn-outline-danger');
+      btnShutdownHeader.classList.add('btn-secondary');
+      btnShutdownHeader.innerHTML = `
+        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#f43f5e;margin-right:4px;"></span>
+        <span>Hors ligne</span>
+      `;
+    }
+
+    if (modalBody) {
+      modalBody.innerHTML = `
+        <div style="text-align:center; padding:1.25rem 0.5rem;">
+          <div style="width:58px; height:58px; border-radius:50%; background:rgba(244, 63, 94, 0.15); border:2px solid #f43f5e; color:#f43f5e; display:inline-flex; align-items:center; justify-content:center; margin-bottom:1.25rem;">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path>
+              <line x1="12" y1="2" x2="12" y2="12"></line>
+            </svg>
+          </div>
+          <h3 style="color:#fff; font-size:1.25rem; font-weight:700; margin-bottom:0.6rem;">Serveur Déconnecté</h3>
+          <p style="color:var(--text-muted); font-size:0.92rem; line-height:1.6; margin-bottom:1.5rem;">
+            La connexion avec le serveur a été coupée. Le processus Node.js est arrêté.
+          </p>
+          <div style="background:rgba(0,0,0,0.4); border:1px solid var(--border-subtle); padding:0.85rem 1rem; border-radius:8px; font-family:var(--font-mono); font-size:0.85rem; color:#38bdf8; margin-bottom:1.5rem; text-align:left;">
+            <div style="color:var(--text-dim); font-size:0.75rem; margin-bottom:0.35rem;">Pour relancer le serveur :</div>
+            <code>start_dashboard.bat</code> &nbsp;<span style="color:var(--text-dim);">ou</span>&nbsp; <code>npm run dashboard</code>
+          </div>
+          <div style="display:flex; justify-content:center; gap:0.75rem;">
+            <button class="btn btn-secondary" onclick="window.close()">Fermer l'onglet</button>
+          </div>
+        </div>
+      `;
+    }
+    showToast('Serveur déconnecté', 'info');
+  }
+}
+
 
 // ==========================================================================
 // TOAST NOTIFICATIONS

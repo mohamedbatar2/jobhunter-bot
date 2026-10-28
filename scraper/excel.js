@@ -26,6 +26,8 @@ function appendToExcel(job, analysis) {
       'Entreprise': fiche.entreprise || job.company || '',
       'Localisation': fiche.localisation || job.location || '',
       'Source': job.source || '',
+      'Filière': analysis.career_track || analysis.classification?.domaine || 'Autre',
+      'Cible': analysis.target_type || 'opportunistic',
       'Match Score': analysis.match_score || 0,
       'CV Recommandé': analysis.cv_recommande || 'cv_general',
       'Raison du Match': analysis.match_reason || '',
@@ -55,6 +57,7 @@ function appendToExcel(job, analysis) {
     const newWorksheet = XLSX.utils.json_to_sheet(data, {
       header: [
         'Date', 'ID', 'Poste', 'Entreprise', 'Localisation', 'Source',
+        'Filière', 'Cible',
         'Match Score', 'CV Recommandé', 'Raison du Match', 'Type Contrat',
         'Salaire', 'Compétences Requises', 'Points Forts', 'Gaps / Manques',
         'Remote', 'Langue Requise', 'Objet Email', 'Corps Email', 'URL Offre'

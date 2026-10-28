@@ -306,6 +306,33 @@ body {
   color: #fff;
 }
 
+.btn-danger {
+  background: linear-gradient(135deg, #e11d48, #be123c);
+  color: #fff;
+  border: 1px solid rgba(244, 63, 94, 0.4);
+  box-shadow: 0 4px 14px rgba(225, 29, 72, 0.35);
+}
+.btn-danger:hover {
+  background: linear-gradient(135deg, #be123c, #9f1239);
+  border-color: rgba(244, 63, 94, 0.6);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(225, 29, 72, 0.45);
+}
+
+.btn-outline-danger {
+  background: rgba(244, 63, 94, 0.08);
+  color: #fb7185;
+  border: 1px solid rgba(244, 63, 94, 0.28);
+}
+.btn-outline-danger:hover {
+  background: linear-gradient(135deg, #e11d48, #be123c);
+  color: #fff;
+  border-color: rgba(244, 63, 94, 0.5);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(225, 29, 72, 0.35);
+}
+
+
 .btn-link {
   background: none;
   border: none;
@@ -958,8 +985,35 @@ body {
 .applied-status-badge {
   font-size: 0.75rem;
   font-weight: 700;
-  padding: 0.2rem 0.6rem;
+  padding: 0.25rem 0.65rem;
   border-radius: var(--radius-pill);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.applied-status-badge .applied-time {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: #a7f3d0;
+  opacity: 0.9;
+  font-weight: 500;
+}
+
+.applied-banner-confirmed {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.75rem 1rem;
+  margin-top: 0.85rem;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  border-radius: var(--radius-sm);
+  color: #34d399;
+  font-size: 0.88rem;
 }
 
 /* Pagination */

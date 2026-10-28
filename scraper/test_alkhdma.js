@@ -1,31 +1,48 @@
 const axios = require('axios');
 
-async function inspectAlkhdma() {
+async function testSearch(query) {
+  const url = `https://www.alkhdma.com/jobs?q=${encodeURIComponent(query)}`;
+  console.log('Fetching:', url);
   try {
-    const resp = await axios.get('https://www.alkhdma.com/jobs?q=securite', {
-      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
+    const resp = await axios.get(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      },
+      timeout: 10000
     });
-    const match = resp.data.match(/<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/);
-    if (match) {
-      console.log('Found __NEXT_DATA__!');
-      const data = JSON.parse(match[1]);
-      console.log('pageProps keys:', Object.keys(data.props?.pageProps || {}));
-      if (data.props?.pageProps?.jobs) {
-        console.log('Jobs count:', data.props.pageProps.jobs.length);
-        console.log('Sample job:', JSON.stringify(data.props.pageProps.jobs[0], null, 2));
-      } else {
-        console.log('pageProps keys:', Object.keys(data.props?.pageProps || {}));
-        console.log('sample pageProps:', JSON.stringify(data.props?.pageProps).slice(0, 500));
+    const html = resp.data;
+    const re = /<a[^>]*href="(\/jobs\/[^"]+)"[^>]*>([\s\S]*?)<\/a>/g;
+    let match;
+    const items = [];
+    while ((match = re.exec(html)) !== null) {
+      const link = match[1];
+      const inner = match[2];
+      const titleMatch = inner.match(/<h2[^>]*>([\s\S]*?)<\/h2>/);
+      const title = titleMatch ? titleMatch[1].replace(/<[^>]+>/g, '').trim() : '';
+      
+      const companyMatch = inner.match(/<span class="flex-1">([\s\S]*?)<\/span>/);
+      const company = companyMatch ? companyMatch[1].replace(/<[^>]+>/g, '').trim() : '';
+      
+      const sectorMatch = inner.match(/<span class="flex flex-col">([^<]+)<\/span>/);
+      const sector = sectorMatch ? sectorMatch[1].trim() : '';
+
+      if (title && link) {
+        items.push({ title, company, sector, link });
       }
-    } else {
-      console.log('No __NEXT_DATA__');
-      // Look for any links with /job or /offres
-      const links = resp.data.match(/href="([^"]*(?:job|offre)[^"]*)"/g);
-      console.log('Links found:', links ? links.slice(0, 10) : 'none');
     }
+    console.log(`Found ${items.length} jobs for query "${query}":`);
+    console.log(items.slice(0, 5));
+    return items;
   } catch (err) {
-    console.error('Inspect error:', err.message);
+    console.error('Error:', err.message);
   }
 }
 
-inspectAlkhdma();
+async function run() {
+  await testSearch('informatique');
+  await testSearch('securite');
+  await testSearch('aya'); // check if filtering by keyword works
+}
+
+run();
+

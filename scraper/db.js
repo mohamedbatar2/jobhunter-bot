@@ -33,6 +33,8 @@ db.exec(`
     language TEXT,
     email_subject TEXT,
     email_body TEXT,
+    career_track TEXT,
+    target_type TEXT,
     date_scraped TEXT
   );
 
@@ -61,7 +63,7 @@ db.exec(`
 const ensureColumns = () => {
   const jobCols = [
     'location', 'salary', 'strengths', 'gaps', 'cv_recommended',
-    'remote', 'language', 'email_subject', 'email_body', 'date_scraped'
+    'remote', 'language', 'email_subject', 'email_body', 'career_track', 'target_type', 'date_scraped'
   ];
   for (const col of jobCols) {
     try {
@@ -99,18 +101,22 @@ function markSeen(job, analysis = null) {
   const language = fiche.langue_requise || job.language || 'Français';
   const emailSubj = draft.objet || job.email_subject || null;
   const emailBody = draft.corps || job.email_body || null;
+  const careerTrack = (analysis && (analysis.career_track || analysis.classification?.domaine)) || job.career_track || 'other';
+  const targetType = (analysis && analysis.target_type) || job.target_type || 'opportunistic';
 
   db.prepare(`
     INSERT INTO jobs (
       id, title, company, location, url, source, score,
       cv_recommended, match_reason, contract_type, salary,
       required_skills, strengths, gaps, remote, language,
-      email_subject, email_body, seen_at, date_scraped
+      email_subject, email_body, career_track, target_type,
+      seen_at, date_scraped
     ) VALUES (
       @id, @title, @company, @location, @url, @source, @score,
       @cv_recommended, @match_reason, @contract_type, @salary,
       @required_skills, @strengths, @gaps, @remote, @language,
-      @email_subject, @email_body, CURRENT_TIMESTAMP, @date_scraped
+      @email_subject, @email_body, @career_track, @target_type,
+      CURRENT_TIMESTAMP, @date_scraped
     )
     ON CONFLICT(id) DO UPDATE SET
       title = excluded.title,
@@ -129,7 +135,9 @@ function markSeen(job, analysis = null) {
       remote = COALESCE(excluded.remote, jobs.remote),
       language = COALESCE(excluded.language, jobs.language),
       email_subject = COALESCE(excluded.email_subject, jobs.email_subject),
-      email_body = COALESCE(excluded.email_body, jobs.email_body)
+      email_body = COALESCE(excluded.email_body, jobs.email_body),
+      career_track = COALESCE(excluded.career_track, jobs.career_track),
+      target_type = COALESCE(excluded.target_type, jobs.target_type)
   `).run({
     id: job.id,
     title: job.title,
@@ -149,6 +157,8 @@ function markSeen(job, analysis = null) {
     language: language,
     email_subject: emailSubj,
     email_body: emailBody,
+    career_track: careerTrack,
+    target_type: targetType,
     date_scraped: new Date().toLocaleDateString('fr-FR')
   });
 }
@@ -328,8 +338,21 @@ function getAllApplications(filters = {}) {
 }
 
 function createOrUpdateApplication(appData) {
-  const id = appData.id || ('app_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6));
-  const appliedAt = appData.status === 'Postulé' || appData.status === 'Applied' 
+  let id = appData.id;
+  if (!id && appData.job_id) {
+    const existing = db.prepare('SELECT id, applied_at FROM applications WHERE job_id = ?').get(appData.job_id);
+    if (existing) {
+      id = existing.id;
+      if (!appData.applied_at && existing.applied_at) {
+        appData.applied_at = existing.applied_at;
+      }
+    }
+  }
+  if (!id) {
+    id = 'app_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+  }
+
+  const appliedAt = (appData.status === 'Postulé' || appData.status === 'Applied') 
     ? (appData.applied_at || new Date().toISOString()) 
     : (appData.applied_at || null);
 
@@ -367,7 +390,7 @@ function createOrUpdateApplication(appData) {
   return db.prepare('SELECT * FROM applications WHERE id = ?').get(id);
 }
 
-function updateApplicationStatus(id, newStatus, notes = null) {
+function updateApplicationStatus(id, newStatus, notes = null, applied_at = null) {
   let updateQuery = `
     UPDATE applications 
     SET status = @status, 
@@ -375,7 +398,11 @@ function updateApplicationStatus(id, newStatus, notes = null) {
   `;
 
   if (newStatus === 'Postulé' || newStatus === 'Applied') {
-    updateQuery += `, applied_at = COALESCE(applied_at, CURRENT_TIMESTAMP)`;
+    if (applied_at) {
+      updateQuery += `, applied_at = @applied_at`;
+    } else {
+      updateQuery += `, applied_at = COALESCE(applied_at, CURRENT_TIMESTAMP)`;
+    }
   }
 
   if (notes !== null) {
@@ -385,7 +412,7 @@ function updateApplicationStatus(id, newStatus, notes = null) {
   updateQuery += ` WHERE id = @id`;
 
   const stmt = db.prepare(updateQuery);
-  stmt.run({ id, status: newStatus, notes });
+  stmt.run({ id, status: newStatus, notes, applied_at: applied_at || null });
 
   return db.prepare(`
     SELECT a.*, j.title as job_title, j.company as job_company 
@@ -543,13 +570,20 @@ function enrichUnscoredJobs() {
         strengths = 'Maîtrise des référentiels EBIOS RM, ISO 27005 et rigueur méthodologique';
         gaps = 'Expérience pratique d\'audit bancaire approfondi';
         reason = 'Forte pertinence pour les missions de gouvernance, gestion des risques et conformité SSI.';
+      } else if (t.includes('python') && (t.includes('backend') || t.includes('api') || t.includes('développeur') || t.includes('developer'))) {
+        score = (t.includes('senior') || t.includes('lead')) ? 4 : 7;
+        cv = 'cv_python_backend';
+        skills = 'Python, REST APIs, FastAPI/Flask, Docker, JWT, OWASP API Security';
+        strengths = 'Projet FinAudit (sécurité REST API & Docker), intégration et validation de données';
+        gaps = score === 4 ? 'Expérience senior obligatoire non satisfaite' : 'Frameworks Python web avancés en environnement de production';
+        reason = 'Bonne opportunité backend Python / API alignée avec vos projets applicatifs.';
       } else if (t.includes('.net') || t.includes('c#') || t.includes('asp.net') || t.includes('backend') || t.includes('software engineer') || t.includes('développeur')) {
         score = (t.includes('senior') || t.includes('java') || t.includes('php') || t.includes('react')) ? 4 : 7;
         cv = 'cv_cegid';
         skills = 'C#, ASP.NET Core 8, REST APIs, SQL, Docker, Serilog/ELK';
-        strengths = 'Projets concrets FinAudit & BankingApp ASP.NET Core 8, stage CFCA Maroc';
+        strengths = 'Expérience professionnelle CFCA Maroc (intégrations C#/.NET, SQL) & projet BankingApp';
         gaps = score === 4 ? 'Stack hors .NET ou niveau senior exigé' : 'Microservices et architecture distribuée complexe';
-        reason = 'Bonne adéquation pour le développement backend .NET / C# et APIs sécurisées.';
+        reason = 'Bonne adéquation pour le développement backend .NET / C# et APIs sécurisées (filière secondaire).';
       } else if (t.includes('commercial') || t.includes('vente') || t.includes('call') || t.includes('conseiller') || t.includes('comptable') || t.includes('rh')) {
         score = 1;
         cv = 'cv_general';

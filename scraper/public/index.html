@@ -74,6 +74,14 @@
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
         <span>Lancer Scraping</span>
       </button>
+
+      <button class="btn btn-outline-danger btn-sm" id="btn-shutdown" title="Arrêter le serveur JobHunter AI">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path>
+          <line x1="12" y1="2" x2="12" y2="12"></line>
+        </svg>
+        <span>Arrêter Serveur</span>
+      </button>
     </div>
   </header>
 
@@ -137,7 +145,7 @@
         <div class="banner-left">
           <div class="banner-badge">Profil Cible</div>
           <h3>Mohammed Batar • Stratégie Multi-CV Activée</h3>
-          <p>Scraping automatique configuré pour le Maroc et le Remote international. Les offres sont analysées selon les 5 déclinaisons de CV : <strong>cv_thales</strong> (SOC/Cyber), <strong>cv_cfg</strong> (GRC/Audit), <strong>cv_cegid</strong> (.NET/Backend), <strong>cv_exploitation</strong> (Sys/Support), <strong>cv_general</strong>.</p>
+          <p>Scraping automatique configuré pour le Maroc et le Remote international. Les offres sont analysées selon les déclinaisons de CV : <strong>cv_thales</strong> (SOC/Cyber), <strong>cv_cfg</strong> (GRC/Audit), <strong>cv_cegid</strong> (.NET/Backend), <strong>cv_python_backend</strong> (Python/API), <strong>cv_exploitation</strong> (Sys/Support), <strong>cv_general</strong>.</p>
         </div>
         <div class="banner-actions">
           <button class="btn btn-emerald" onclick="switchView('jobs', { scoreTier: 'high' })">
@@ -253,6 +261,7 @@
               <option value="cv_thales">🛡️ cv_thales (SOC / Cyberdéfense)</option>
               <option value="cv_cfg">⚖️ cv_cfg (GRC / Audit SI / Banque)</option>
               <option value="cv_cegid">💻 cv_cegid (.NET / C# / Backend)</option>
+              <option value="cv_python_backend">🐍 cv_python_backend (Python / API Backend)</option>
               <option value="cv_exploitation">🖥️ cv_exploitation (SysAdmin / Support)</option>
               <option value="cv_general">📄 cv_general (Général IT)</option>
             </select>
@@ -422,7 +431,7 @@
               <th>CV Utilisé</th>
               <th>Statut Actuel</th>
               <th>Prochaine Étape / Notes</th>
-              <th>Date Postulée</th>
+              <th>Date & Heure Postulé 🕒</th>
               <th>Action Rapide</th>
             </tr>
           </thead>
@@ -581,6 +590,7 @@
                 <option value="cv_thales">cv_thales (SOC / Cyber)</option>
                 <option value="cv_cfg">cv_cfg (GRC / Audit)</option>
                 <option value="cv_cegid">cv_cegid (.NET / Backend)</option>
+                <option value="cv_python_backend">cv_python_backend (Python / Backend)</option>
                 <option value="cv_exploitation">cv_exploitation (SysAdmin / Support)</option>
                 <option value="cv_general">cv_general (Général)</option>
               </select>
@@ -589,14 +599,20 @@
 
           <div class="form-row">
             <div class="form-group">
-              <label>Prochaine Étape</label>
-              <input type="text" id="app-next-step" class="form-input" placeholder="Ex: Relance email, Entretien Teams...">
+              <label>Date & Heure Candidature 🕒</label>
+              <input type="datetime-local" id="app-applied-at" class="form-input">
+              <small style="color:var(--text-dim); font-size:0.75rem;">Enregistrée automatiquement au clic sur Postuler</small>
             </div>
 
             <div class="form-group">
               <label>Date Entretien (si programmé)</label>
               <input type="datetime-local" id="app-interview-date" class="form-input">
             </div>
+          </div>
+
+          <div class="form-group">
+            <label>Prochaine Étape</label>
+            <input type="text" id="app-next-step" class="form-input" placeholder="Ex: Relance email, Entretien Teams...">
           </div>
 
           <div class="form-group">
@@ -609,6 +625,44 @@
             <button type="submit" class="btn btn-primary">Enregistrer la Candidature</button>
           </div>
         </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- MODAL: SHUTDOWN CONFIRMATION -->
+  <!-- ============================================================== -->
+  <div class="modal-backdrop" id="modal-shutdown" style="display:none;" onclick="if(event.target === this) closeShutdownModal()">
+    <div class="modal-dialog glass-panel" style="max-width: 480px;">
+      <div class="modal-header" style="border-bottom-color: rgba(244, 63, 94, 0.2);">
+        <div style="display:flex; align-items:center; gap:0.75rem;">
+          <div style="display:flex; align-items:center; justify-content:center; width:36px; height:36px; border-radius:10px; background:rgba(244, 63, 94, 0.15); border:1px solid rgba(244, 63, 94, 0.3); color:#f43f5e;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path>
+              <line x1="12" y1="2" x2="12" y2="12"></line>
+            </svg>
+          </div>
+          <h3 style="color:#fff;">Arrêter le Serveur</h3>
+        </div>
+        <button class="modal-close-btn" onclick="closeShutdownModal()">✕</button>
+      </div>
+      <div class="modal-body" id="modal-shutdown-body">
+        <p style="color:var(--text-muted); font-size:0.92rem; line-height:1.6; margin-bottom:1rem;">
+          Êtes-vous sûr de vouloir arrêter le serveur <strong>JobHunter AI</strong> et le robot de scraping (index.js) ?
+        </p>
+        <div style="background:rgba(244, 63, 94, 0.08); border-left:3px solid #f43f5e; padding:0.85rem 1rem; border-radius:6px; font-size:0.85rem; color:#fca5a5; margin-bottom:1.25rem;">
+          ⚠️ Le tableau de bord et le bot Telegram s'arrêteront simultanément. Pour les relancer ensemble, exécutez <code>start_dashboard.bat</code>.
+        </div>
+        <div class="modal-footer" style="margin-top:1rem; padding-top:0.75rem;">
+          <button type="button" class="btn btn-secondary" onclick="closeShutdownModal()">Annuler</button>
+          <button type="button" class="btn btn-danger" id="btn-confirm-shutdown">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path>
+              <line x1="12" y1="2" x2="12" y2="12"></line>
+            </svg>
+            <span>Confirmer l'arrêt</span>
+          </button>
+        </div>
       </div>
     </div>
   </div>

@@ -29,8 +29,9 @@ const NEGATIVE_TITLE_PATTERNS = [
   /\b(juriste|avocat|notaire|cuisinier|serveur|chauffeur|magasinier|cariste|livreur|agent\s+d['’]entretien|agent\s+de\s+s[eé]curit[eé]|enseignant|professeur)\b/i
 ];
 
-// Keywords indicating IT infrastructure, systems, networks, IT support, hardware, GLPI, etc.
+// Keywords indicating IT, Cybersecurity, and Software Development roles.
 const POSITIVE_IT_KEYWORDS = [
+  // IT Infrastructure, Systems, Networks, Support, Cyber
   /\bsyst[eè]mes?\b/i,
   /\br[eé]seaux?\b/i,
   /\bnetwork\b/i,
@@ -51,7 +52,18 @@ const POSITIVE_IT_KEYWORDS = [
   /\bcloud\b/i,
   /\bs[eé]curit[eé]\s+informatique\b/i,
   /\bcybers[eé]curit[eé]\b/i,
-  /\bstage\s*(syst[eè]mes?|r[eé]seaux?|it|informatique|helpdesk|support)\b/i
+  /\bstage\s*(syst[eè]mes?|r[eé]seaux?|it|informatique|helpdesk|support|d[eé]veloppement)?\b/i,
+
+  // Software development, backend, .NET, Python, APIs, integration
+  /\bd[eé]veloppeur\b/i,
+  /\bdeveloper\b/i,
+  /\bsoftware\s*(engineer|engineering|developer)?\b/i,
+  /\bbackend\b/i,
+  /\bfull[- ]?stack\b/i,
+  /\b(c#|\.net|asp\.net)\b/i,
+  /\bpython\b/i,
+  /\bapi\b/i,
+  /\bing[eé]nieur\s+d['’]?[eé]tudes?\s+et\s+d[eé]veloppement\b/i
 ];
 
 /**
@@ -94,7 +106,7 @@ function shouldAnalyzeJob(job) {
   // If no positive signal found in title or description
   return {
     shouldAnalyze: false,
-    reason: `Titre ne correspondant pas au domaine Systèmes / Réseaux / Support IT (${title})`
+    reason: `Titre ne correspondant pas aux profils cibles (IT, Cyber, Dev, GRC) (${title})`
   };
 }
 
@@ -139,15 +151,17 @@ function createSyntheticRejection(job, reason) {
   return {
     match_score: 1,
     match_reason: `Pré-filtrage : ${reason}`,
-    gaps: ['Poste hors du périmètre Systèmes, Réseaux ou Support IT.'],
+    gaps: ['Poste hors du périmètre ciblé (Cybersécurité, Développement logiciel, Support IT).'],
     remote: false,
+    career_track: 'other',
+    target_type: 'opportunistic',
     classification: {
-      domaine: 'autre',
-      niveau: 'non_precise',
-      contrat: 'non_precise',
-      mode_travail: 'non_precise',
-      zone: 'maroc',
-      decision: 'non_pertinent'
+      domaine: 'other',
+      niveau: 'unknown',
+      contrat: 'unknown',
+      mode_travail: 'unknown',
+      zone: 'morocco',
+      decision: 'reject'
     },
     cv_recommande: 'cv_general',
     fiche: {
